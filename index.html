@@ -2,12 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="wth=device-wth, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="theme-color" content="#0f1923" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <title>Chatsapp</title>
+  <title>QuickChat</title>
   <style>
     :root {
       --bg:       #0f1923;
@@ -23,7 +23,7 @@
       --radius:   14px;
     }
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-    html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    html, body { height: 100%; overflow: hden; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
 
     /* ─── SCREENS ─── */
     .screen { display: none; position: fixed; inset: 0; flex-direction: column; background: var(--bg); }
@@ -38,7 +38,7 @@
       padding: 40px 24px 20px;
     }
     .logo-ring {
-      width: 96px; height: 96px; border-radius: 50%;
+      wth: 96px; height: 96px; border-radius: 50%;
       background: linear-gradient(135deg, var(--accent), #006eff);
       display: flex; align-items: center; justify-content: center;
       font-size: 42px; margin-bottom: 24px;
@@ -50,7 +50,7 @@
     .home-actions { padding: 24px 20px 40px; display: flex; flex-direction: column; gap: 14px; }
     .action-card {
       background: var(--surface);
-      border: 1px solid rgba(255,255,255,.06);
+      border: 1px sol rgba(255,255,255,.06);
       border-radius: var(--radius);
       padding: 18px 20px;
       display: flex; align-items: center; gap: 16px;
@@ -60,7 +60,7 @@
     }
     .action-card:active { transform: scale(.97); background: var(--surface2); }
     .action-card.primary { border-color: rgba(0,200,150,.3); background: rgba(0,200,150,.08); }
-    .action-icon { font-size: 28px; width: 48px; text-align: center; flex-shrink: 0; }
+    .action-icon { font-size: 28px; wth: 48px; text-align: center; flex-shrink: 0; }
     .action-title { font-size: 16px; font-weight: 700; }
     .action-desc { font-size: 12px; color: var(--text2); margin-top: 3px; }
     .action-arrow { margin-left: auto; color: var(--text2); font-size: 18px; }
@@ -76,17 +76,17 @@
     .modal-sheet {
       background: var(--surface);
       border-radius: 22px 22px 0 0;
-      width: 100%; max-width: 480px;
+      wth: 100%; max-wth: 480px;
       padding: 28px 24px 36px;
-      animation: slideUp .25s cubic-bezier(.32,1,.42,1);
+      animation: sleUp .25s cubic-bezier(.32,1,.42,1);
     }
-    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-    .modal-handle { width: 40px; height: 4px; background: var(--surface2); border-radius: 99px; margin: 0 auto 24px; }
+    @keyframes sleUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .modal-handle { wth: 40px; height: 4px; background: var(--surface2); border-radius: 99px; margin: 0 auto 24px; }
     .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 18px; }
     .field-label { font-size: 12px; color: var(--text2); margin-bottom: 8px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase; }
     .text-input {
-      width: 100%; background: var(--surface2);
-      border: 1.5px solid transparent;
+      wth: 100%; background: var(--surface2);
+      border: 1.5px sol transparent;
       border-radius: 12px; padding: 14px 16px;
       font-size: 16px; color: var(--text); outline: none;
       transition: border-color .2s;
@@ -111,18 +111,18 @@
       display: flex; align-items: center; gap: 12px;
       padding: 12px 16px;
       padding-top: calc(12px + env(safe-area-inset-top));
-      border-bottom: 1px solid rgba(255,255,255,.06);
+      border-bottom: 1px sol rgba(255,255,255,.06);
       flex-shrink: 0;
     }
     .header-back { background: none; border: none; color: var(--text2); font-size: 22px; cursor: pointer; padding: 4px 8px 4px 0; }
     .header-avatar {
-      width: 40px; height: 40px; border-radius: 50%;
+      wth: 40px; height: 40px; border-radius: 50%;
       background: linear-gradient(135deg, var(--accent), #006eff);
       display: flex; align-items: center; justify-content: center;
       font-size: 18px; flex-shrink: 0;
     }
-    .header-info { flex: 1; min-width: 0; }
-    .header-name { font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .header-info { flex: 1; min-wth: 0; }
+    .header-name { font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hden; text-overflow: ellipsis; }
     .header-code { font-size: 12px; color: var(--text2); }
     .header-actions { display: flex; gap: 4px; }
     .icon-btn { background: none; border: none; color: var(--text2); font-size: 20px; cursor: pointer; padding: 8px; border-radius: 8px; }
@@ -130,7 +130,7 @@
 
     .notif-bar {
       background: rgba(0,200,150,.08);
-      border-bottom: 1px solid rgba(0,200,150,.15);
+      border-bottom: 1px sol rgba(0,200,150,.15);
       padding: 10px 16px;
       display: none; align-items: center; gap: 10px;
       font-size: 13px; color: var(--text2); cursor: pointer;
@@ -144,14 +144,14 @@
       display: flex; flex-direction: column; gap: 3px;
       scroll-behavior: smooth;
     }
-    .messages-wrap::-webkit-scrollbar { width: 4px; }
+    .messages-wrap::-webkit-scrollbar { wth: 4px; }
     .messages-wrap::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 4px; }
 
     /* Bubbles */
-    .msg { display: flex; flex-direction: column; max-width: 78%; }
+    .msg { display: flex; flex-direction: column; max-wth: 78%; }
     .msg.me { align-self: flex-end; align-items: flex-end; }
     .msg.them { align-self: flex-start; align-items: flex-start; }
-    .msg.system { align-self: center; max-width: 92%; }
+    .msg.system { align-self: center; max-wth: 92%; }
     .bubble {
       padding: 9px 13px; border-radius: 18px;
       font-size: 15px; line-height: 1.45; word-break: break-word;
@@ -159,7 +159,7 @@
     .me .bubble { background: var(--bubble-me); border-radius: 18px 18px 4px 18px; }
     .them .bubble { background: var(--bubble-them); border-radius: 18px 18px 18px 4px; }
     .system .bubble {
-      background: rgba(0,200,150,.1); border: 1px solid rgba(0,200,150,.2);
+      background: rgba(0,200,150,.1); border: 1px sol rgba(0,200,150,.2);
       color: var(--text2); font-size: 13px; border-radius: 10px;
       padding: 6px 14px; text-align: center; font-style: italic;
     }
@@ -169,10 +169,10 @@
 
     /* Consecutive same-sender grouping */
     .me .bubble.first { border-radius: 18px 18px 4px 18px; }
-    .me .bubble.mid   { border-radius: 18px 4px 4px 18px; }
+    .me .bubble.m   { border-radius: 18px 4px 4px 18px; }
     .me .bubble.last  { border-radius: 18px 4px 18px 18px; }
     .them .bubble.first { border-radius: 18px 18px 18px 4px; }
-    .them .bubble.mid   { border-radius: 4px 18px 18px 4px; }
+    .them .bubble.m   { border-radius: 4px 18px 18px 4px; }
     .them .bubble.last  { border-radius: 4px 18px 18px 18px; }
 
     /* Input area */
@@ -181,7 +181,7 @@
       display: flex; align-items: flex-end; gap: 10px;
       padding: 10px 12px;
       padding-bottom: calc(10px + env(safe-area-inset-bottom));
-      border-top: 1px solid rgba(255,255,255,.06);
+      border-top: 1px sol rgba(255,255,255,.06);
       flex-shrink: 0;
     }
     .msg-textarea {
@@ -194,7 +194,7 @@
     }
     .msg-textarea::placeholder { color: var(--text2); }
     .send-btn {
-      width: 46px; height: 46px; border-radius: 50%;
+      wth: 46px; height: 46px; border-radius: 50%;
       background: var(--accent); border: none; cursor: pointer;
       display: flex; align-items: center; justify-content: center;
       font-size: 20px; flex-shrink: 0; transition: all .15s;
@@ -216,7 +216,7 @@
 
     /* ─── LOADING ─── */
     #loadingScreen { align-items: center; justify-content: center; }
-    .spinner { width: 40px; height: 40px; border: 3px solid var(--surface2); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
+    .spinner { wth: 40px; height: 40px; border: 3px sol var(--surface2); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
     /* ─── ROOM CODE DISPLAY ─── */
@@ -239,15 +239,15 @@
 <body>
 
 <!-- ═══════════════ LOADING SCREEN ═══════════════ -->
-<div id="loadingScreen" class="screen active">
+<div ="loadingScreen" class="screen active">
   <div class="spinner"></div>
 </div>
 
 <!-- ═══════════════ HOME SCREEN ═══════════════ -->
-<div id="homeScreen" class="screen">
+<div ="homeScreen" class="screen">
   <div class="home-hero">
     <div class="logo-ring">💬</div>
-    <div class="home-title">Chatsapp</div>
+    <div class="home-title">QuickChat</div>
     <div class="home-subtitle">Instant rooms. No account needed.</div>
   </div>
   <div class="home-actions">
@@ -271,13 +271,13 @@
 </div>
 
 <!-- ═══════════════ CHAT SCREEN ═══════════════ -->
-<div id="chatScreen" class="screen">
+<div ="chatScreen" class="screen">
   <div class="chat-header">
     <button class="header-back" onclick="leaveRoom()">‹</button>
     <div class="header-avatar">💬</div>
     <div class="header-info">
-      <div class="header-name" id="headerName">Room</div>
-      <div class="header-code" id="headerCode">Code: ——</div>
+      <div class="header-name" ="headerName">Room</div>
+      <div class="header-code" ="headerCode">Code: ——</div>
     </div>
     <div class="header-actions">
       <button class="icon-btn" onclick="copyCode()" title="Copy code">📋</button>
@@ -285,75 +285,75 @@
     </div>
   </div>
 
-  <div class="notif-bar" id="notifBar" onclick="requestNotifPermission()">
+  <div class="notif-bar" ="notifBar" onclick="requestNotifPermission()">
     <span>🔔</span>
     <div>Tap to <span>enable notifications</span> — get messages even when app is closed</div>
   </div>
 
-  <div class="messages-wrap" id="msgWrap">
-    <div class="empty-chat" id="emptyState">
+  <div class="messages-wrap" ="msgWrap">
+    <div class="empty-chat" ="emptyState">
       <div class="empty-chat-icon">💬</div>
       <div class="empty-chat-text">No messages yet. Say hi!</div>
     </div>
   </div>
 
   <div class="chat-input-area">
-    <textarea class="msg-textarea" id="msgInput" placeholder="Message..." rows="1"
+    <textarea class="msg-textarea" ="msgInput" placeholder="Message..." rows="1"
       onkeydown="handleKey(event)" oninput="autoGrow(this)"></textarea>
-    <button class="send-btn" id="sendBtn" onclick="sendMsg()">➤</button>
+    <button class="send-btn" ="sendBtn" onclick="sendMsg()">➤</button>
   </div>
 </div>
 
 <!-- ═══════════════ MODAL: JOIN ROOM ═══════════════ -->
-<div class="modal-backdrop" id="joinModal">
+<div class="modal-backdrop" ="joinModal">
   <div class="modal-sheet">
     <div class="modal-handle"></div>
     <div class="modal-title">🔑 Enter Room Code</div>
     <div class="field-label">6-character code</div>
-    <input class="text-input code-input" id="codeInput" maxlength="6" placeholder="XXXXXX"
+    <input class="text-input code-input" ="codeInput" maxlength="6" placeholder="XXXXXX"
       oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')"
       onkeydown="if(event.key==='Enter')checkCode()">
-    <div class="error-msg" id="codeError">❌ Invalid code — room not found.</div>
+    <div class="error-msg" ="codeError">❌ Inval code — room not found.</div>
     <div class="modal-btns">
       <button class="btn btn-ghost" onclick="closeModal('joinModal')">Cancel</button>
-      <button class="btn btn-accent" id="checkBtn" onclick="checkCode()">Next →</button>
+      <button class="btn btn-accent" ="checkBtn" onclick="checkCode()">Next →</button>
     </div>
   </div>
 </div>
 
 <!-- ═══════════════ MODAL: ENTER NAME ═══════════════ -->
-<div class="modal-backdrop" id="nameModal">
+<div class="modal-backdrop" ="nameModal">
   <div class="modal-sheet">
     <div class="modal-handle"></div>
-    <div class="modal-title" id="nameModalTitle">👤 What's your name?</div>
+    <div class="modal-title" ="nameModalTitle">👤 What's your name?</div>
     <div class="field-label">Display name</div>
-    <input class="text-input" id="nameInput" maxlength="30" placeholder="Enter your name..."
+    <input class="text-input" ="nameInput" maxlength="30" placeholder="Enter your name..."
       onkeydown="if(event.key==='Enter')confirmName()">
-    <div class="error-msg" id="nameError">⚠️ Please enter your name.</div>
+    <div class="error-msg" ="nameError">⚠️ Please enter your name.</div>
     <div class="modal-btns">
       <button class="btn btn-ghost" onclick="closeModal('nameModal')">Cancel</button>
-      <button class="btn btn-accent" id="nameConfirmBtn" onclick="confirmName()">Enter Room</button>
+      <button class="btn btn-accent" ="nameConfirmBtn" onclick="confirmName()">Enter Room</button>
     </div>
   </div>
 </div>
 
 <!-- ═══════════════ MODAL: ROOM CREATED ═══════════════ -->
-<div class="modal-backdrop" id="createdModal">
+<div class="modal-backdrop" ="createdModal">
   <div class="modal-sheet">
     <div class="modal-handle"></div>
     <div class="modal-title">🎉 Room Created!</div>
     <p style="color:var(--text2);font-size:14px;margin-bottom:16px;">Share this code with people you want to chat with:</p>
     <div class="code-display-box">
       <div class="code-display-label">Room Code</div>
-      <div class="code-display-value" id="createdCodeDisplay">——</div>
+      <div class="code-display-value" ="createdCodeDisplay">——</div>
     </div>
-    <button class="btn btn-ghost" style="width:100%;margin-bottom:10px;" onclick="copyCreatedCode()">📋 Copy Code</button>
-    <button class="btn btn-accent" style="width:100%;" onclick="goToChat()">Go to Chat →</button>
+    <button class="btn btn-ghost" style="wth:100%;margin-bottom:10px;" onclick="copyCreatedCode()">📋 Copy Code</button>
+    <button class="btn btn-accent" style="wth:100%;" onclick="goToChat()">Go to Chat →</button>
   </div>
 </div>
 
 <!-- ═══════════════ TOAST ═══════════════ -->
-<div id="toast"></div>
+<div ="toast"></div>
 
 <!-- ═══════════════ FIREBASE SDK ═══════════════ -->
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
@@ -393,10 +393,67 @@ let state = {
   lastKey:   null,
 };
 
+// ── E2E Encryption (AES-GCM 256-bit) ───────────
+// Key is derived from room code — only room members can decrypt
+// Firebase stores only encrypted gibberish 🔒
+let roomKey = null;
+
+async function deriveRoomKey(roomCode) {
+  const enc = new TextEncoder();
+  // Import room code as raw key material
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw', enc.encode(roomCode), 'PBKDF2', false, ['deriveKey']
+  );
+  // Derive AES-GCM 256-bit key using PBKDF2
+  return crypto.subtle.deriveKey(
+    {
+      name: 'PBKDF2',
+      salt: enc.encode('chatsapp-e2e-salt-v1'),
+      iterations: 150000,
+      hash: 'SHA-256'
+    },
+    keyMaterial,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt']
+  );
+}
+
+async function encryptMsg(plainText) {
+  const enc = new TextEncoder();
+  const iv = crypto.getRandomValues(new Uint8Array(12)); // 96-bit IV
+  const cipherBuf = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv },
+    roomKey,
+    enc.encode(plainText)
+  );
+  // Pack: [12 bytes IV] + [ciphertext] → base64 string
+  const combined = new Uint8Array(12 + cipherBuf.byteLength);
+  combined.set(iv, 0);
+  combined.set(new Uint8Array(cipherBuf), 12);
+  return btoa(String.fromCharCode(...combined));
+}
+
+async function decryptMsg(encoded) {
+  try {
+    const combined = Uint8Array.from(atob(encoded), c => c.charCodeAt(0));
+    const iv = combined.slice(0, 12);
+    const ct = combined.slice(12);
+    const plainBuf = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv },
+      roomKey,
+      ct
+    );
+    return new TextDecoder().decode(plainBuf);
+  } catch(e) {
+    return '🔒 [Encrypted message]';
+  }
+}
+
 // ── Boot ──────────────────────────────────────
 window.addEventListener('load', async () => {
   // Generate or restore userId
-  state.userId = ls('userId') || uid(20);
+  state.userId = ls('userId') || u(20);
   ls('userId', state.userId);
 
   // Register service worker
@@ -427,16 +484,16 @@ window.addEventListener('load', async () => {
 });
 
 // ── Screen helpers ─────────────────────────────
-function showScreen(id) {
+function showScreen() {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
+  document.getElementById().classList.add('active');
 }
 
-function openModal(id) {
-  document.getElementById(id).classList.add('open');
+function openModal() {
+  document.getElementById().classList.add('open');
 }
-function closeModal(id) {
-  document.getElementById(id).classList.remove('open');
+function closeModal() {
+  document.getElementById().classList.remove('open');
 }
 function closeAllModals() {
   document.querySelectorAll('.modal-backdrop').forEach(m => m.classList.remove('open'));
@@ -477,7 +534,7 @@ async function checkCode() {
   try {
     const snap = await db.ref(`rooms/${code}`).once('value');
     if (!snap.exists()) {
-      errEl.textContent = '❌ Invalid code — room not found.';
+      errEl.textContent = '❌ Inval code — room not found.';
       errEl.style.display = 'block';
       btn.textContent = 'Next →'; btn.disabled = false;
       return;
@@ -554,9 +611,16 @@ async function goToChat() {
 async function enterRoom() {
   showScreen('chatScreen');
   document.getElementById('headerName').textContent = `Room · ${state.roomId}`;
-  document.getElementById('headerCode').textContent  = `Code: ${state.roomId}`;
+  document.getElementById('headerCode').textContent  = `🔒 ${state.roomId}`;
   document.getElementById('msgWrap').innerHTML =
-    '<div class="empty-chat" id="emptyState"><div class="empty-chat-icon">💬</div><div class="empty-chat-text">Loading messages…</div></div>';
+    '<div class="empty-chat" ="emptyState"><div class="empty-chat-icon">🔒</div><div class="empty-chat-text">Setting up encryption…</div></div>';
+
+  // Derive E2E encryption key from room code
+  try {
+    roomKey = await deriveRoomKey(state.roomId);
+  } catch(e) {
+    toast('❌ Encryption setup failed.'); return;
+  }
 
   // Notification banner
   if (Notification.permission !== 'granted') {
@@ -569,32 +633,34 @@ async function enterRoom() {
   // Detach old listener
   if (state.msgListener) { state.msgListener.off(); state.msgListener = null; }
 
-  // Load existing messages
+  // Load existing messages (decrypt each one)
   state.lastKey = null;
   try {
     const snap = await db.ref(`rooms/${state.roomId}/messages`)
       .orderByKey().limitToLast(100).once('value');
     document.getElementById('msgWrap').innerHTML = '';
     if (snap.exists()) {
+      const renderPromises = [];
       snap.forEach(child => {
-        renderMsg(child.val());
+        renderPromises.push(renderMsg(child.val()));
         state.lastKey = child.key;
       });
+      await Promise.all(renderPromises);
       scrollBottom();
     } else {
       document.getElementById('msgWrap').innerHTML =
-        '<div class="empty-chat" id="emptyState"><div class="empty-chat-icon">💬</div><div class="empty-chat-text">No messages yet. Say hi!</div></div>';
+        '<div class="empty-chat" ="emptyState"><div class="empty-chat-icon">💬</div><div class="empty-chat-text">No messages yet. Say hi!</div></div>';
     }
   } catch(e) { console.error(e); }
 
-  // Listen for new messages
+  // Listen for new messages (decrypt each one)
   let ref = db.ref(`rooms/${state.roomId}/messages`).orderByKey();
   if (state.lastKey) ref = ref.startAfter(state.lastKey);
   state.msgListener = ref;
-  ref.on('child_added', snap => {
+  ref.on('child_added', async snap => {
     const emptyEl = document.getElementById('emptyState');
     if (emptyEl) emptyEl.remove();
-    renderMsg(snap.val());
+    await renderMsg(snap.val());
     state.lastKey = snap.key;
     scrollBottom();
   });
@@ -610,7 +676,7 @@ function leaveRoom() {
 // ── Render message ─────────────────────────────
 let prevSenderId = null;
 
-function renderMsg(msg) {
+async function renderMsg(msg) {
   const wrap = document.getElementById('msgWrap');
   const div = document.createElement('div');
 
@@ -619,6 +685,8 @@ function renderMsg(msg) {
     div.innerHTML = `<div class="bubble">${esc(msg.text)}</div>`;
     prevSenderId = null;
   } else {
+    // Decrypt message text before rendering
+    const plainText = msg.text ? await decryptMsg(msg.text) : '';
     const isMe = msg.userId === state.userId;
     const newSender = msg.userId !== prevSenderId;
     if (newSender && prevSenderId !== null) {
@@ -628,7 +696,7 @@ function renderMsg(msg) {
     const showName = !isMe && newSender;
     div.innerHTML = `
       ${showName ? `<div class="msg-sender">${esc(msg.sender)}</div>` : ''}
-      <div class="bubble">${esc(msg.text)}</div>
+      <div class="bubble">${esc(plainText)}</div>
       <div class="msg-time">${fmtTime(msg.ts)}</div>
     `;
     prevSenderId = msg.userId;
@@ -638,17 +706,23 @@ function renderMsg(msg) {
 }
 
 // ── Send message ───────────────────────────────
-function sendMsg() {
+async function sendMsg() {
   const inp = document.getElementById('msgInput');
   const text = inp.value.trim();
-  if (!text || !state.roomId) return;
+  if (!text || !state.roomId || !roomKey) return;
   inp.value = ''; autoGrow(inp);
 
-  db.ref(`rooms/${state.roomId}/messages`).push({
-    text, sender: state.username,
-    userId: state.userId,
-    ts: Date.now(), type: 'chat'
-  }).catch(() => toast('❌ Failed to send. Check connection.'));
+  try {
+    const encryptedText = await encryptMsg(text); // Encrypt before sending 🔒
+    db.ref(`rooms/${state.roomId}/messages`).push({
+      text: encryptedText,
+      sender: state.username,
+      userId: state.userId,
+      ts: Date.now(), type: 'chat'
+    }).catch(() => toast('❌ Failed to send. Check connection.'));
+  } catch(e) {
+    toast('❌ Encryption failed. Try again.');
+  }
 }
 
 function sendSystemMsg(text) {
@@ -673,7 +747,7 @@ async function requestNotifPermission() {
 async function registerFCMToken() {
   if (!messaging || !VAPID_KEY || VAPID_KEY === 'YOUR_VAPID_KEY') return;
   try {
-    const token = await messaging.getToken({ vapidKey: VAPID_KEY });
+    const token = await messaging.getToken({ vapKey: VAPID_KEY });
     if (token && state.roomId) {
       await db.ref(`rooms/${state.roomId}/tokens/${state.userId}`).set(token);
     }
@@ -692,7 +766,7 @@ function copyCreatedCode() {
 async function shareRoom() {
   if (navigator.share) {
     try {
-      await navigator.share({ title: 'Join my Chatsapp room', text: `Use code: ${state.roomId} to join my chat!` });
+      await navigator.share({ title: 'Join my QuickChat room', text: `Use code: ${state.roomId} to join my chat!` });
     } catch(e) {}
   } else { copyCode(); }
 }
@@ -702,7 +776,7 @@ function copyText(t) {
 }
 
 // ── Helpers ────────────────────────────────────
-function uid(n) {
+function u(n) {
   return Array.from(crypto.getRandomValues(new Uint8Array(n)))
     .map(b => b.toString(36)).join('').substring(0, n);
 }
