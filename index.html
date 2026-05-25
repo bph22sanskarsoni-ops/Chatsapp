@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0f1923" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Chatsapp</title>
+  <style>
+    :root {
+      --bg:       #0f1923;
+      --surface:  #1a2534;
+      --surface2: #243447;
+      --accent:   #00c896;
+      --accent2:  #00a378;
+      --text:     #e8edf2;
+      --text2:    #7f92a3;
+      --bubble-me: #0b4d3b;
+      --bubble-them: #1a2534;
+      --red:      #ff5f5f;
+      --radius:   14px;
+    }
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+
+    /* ─── SCREENS ─── */
+    .screen { display: none; position: fixed; inset: 0; flex-direction: column; background: var(--bg); }
+    .screen.active { display: flex; }
+
+    /* ─── HOME ─── */
+    #homeScreen { align-items: stretch; }
+    .home-hero {
+      flex: 1;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background: radial-gradient(ellipse at 50% 30%, rgba(0,200,150,.12) 0%, transparent 70%);
+      padding: 40px 24px 20px;
+    }
+    .logo-ring {
+      width: 96px; height: 96px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), #006eff);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 42px; margin-bottom: 24px;
+      box-shadow: 0 0 40px rgba(0,200,150,.35);
+    }
+    .home-title { font-size: 32px; font-weight: 800; letter-spacing: -.5px; }
+    .home-subtitle { color: var(--text2); margin-top: 6px; font-size: 14px; }
+
+    .home-actions { padding: 24px 20px 40px; display: flex; flex-direction: column; gap: 14px; }
+    .action-card {
+      background: var(--surface);
+      border: 1px solid rgba(255,255,255,.06);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      display: flex; align-items: center; gap: 16px;
+      cursor: pointer;
+      transition: transform .15s, background .15s;
+      user-select: none;
+    }
+    .action-card:active { transform: scale(.97); background: var(--surface2); }
+    .action-card.primary { border-color: rgba(0,200,150,.3); background: rgba(0,200,150,.08); }
+    .action-icon { font-size: 28px; width: 48px; text-align: center; flex-shrink: 0; }
+    .action-title { font-size: 16px; font-weight: 700; }
+    .action-desc { font-size: 12px; color: var(--text2); margin-top: 3px; }
+    .action-arrow { margin-left: auto; color: var(--text2); font-size: 18px; }
+
+    /* ─── MODALS ─── */
+    .modal-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,.7);
+      display: none; align-items: flex-end; justify-content: center;
+      z-index: 999; padding-bottom: env(safe-area-inset-bottom);
+    }
+    .modal-backdrop.open { display: flex; animation: bdfadeIn .2s ease; }
+    @keyframes bdfadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .modal-sheet {
+      background: var(--surface);
+      border-radius: 22px 22px 0 0;
+      width: 100%; max-width: 480px;
+      padding: 28px 24px 36px;
+      animation: slideUp .25s cubic-bezier(.32,1,.42,1);
+    }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .modal-handle { width: 40px; height: 4px; background: var(--surface2); border-radius: 99px; margin: 0 auto 24px; }
+    .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 18px; }
+    .field-label { font-size: 12px; color: var(--text2); margin-bottom: 8px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase; }
+    .text-input {
+      width: 100%; background: var(--surface2);
+      border: 1.5px solid transparent;
+      border-radius: 12px; padding: 14px 16px;
+      font-size: 16px; color: var(--text); outline: none;
+      transition: border-color .2s;
+    }
+    .text-input:focus { border-color: var(--accent); }
+    .text-input::placeholder { color: var(--text2); }
+    .code-input { text-align: center; letter-spacing: 8px; font-size: 24px; font-weight: 700; text-transform: uppercase; }
+    .error-msg { color: var(--red); font-size: 13px; margin-top: 8px; display: none; }
+    .modal-btns { display: flex; gap: 10px; margin-top: 20px; }
+    .btn { flex: 1; padding: 14px; border-radius: 12px; font-size: 15px; font-weight: 700; border: none; cursor: pointer; transition: all .15s; }
+    .btn:active { transform: scale(.96); }
+    .btn-ghost { background: var(--surface2); color: var(--text2); }
+    .btn-ghost:hover { background: #2d3f53; }
+    .btn-accent { background: var(--accent); color: #000; }
+    .btn-accent:hover { background: var(--accent2); }
+    .btn-accent:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* ─── CHAT ─── */
+    #chatScreen { }
+    .chat-header {
+      background: var(--surface);
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 16px;
+      padding-top: calc(12px + env(safe-area-inset-top));
+      border-bottom: 1px solid rgba(255,255,255,.06);
+      flex-shrink: 0;
+    }
+    .header-back { background: none; border: none; color: var(--text2); font-size: 22px; cursor: pointer; padding: 4px 8px 4px 0; }
+    .header-avatar {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), #006eff);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; flex-shrink: 0;
+    }
+    .header-info { flex: 1; min-width: 0; }
+    .header-name { font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .header-code { font-size: 12px; color: var(--text2); }
+    .header-actions { display: flex; gap: 4px; }
+    .icon-btn { background: none; border: none; color: var(--text2); font-size: 20px; cursor: pointer; padding: 8px; border-radius: 8px; }
+    .icon-btn:hover { background: var(--surface2); }
+
+    .notif-bar {
+      background: rgba(0,200,150,.08);
+      border-bottom: 1px solid rgba(0,200,150,.15);
+      padding: 10px 16px;
+      display: none; align-items: center; gap: 10px;
+      font-size: 13px; color: var(--text2); cursor: pointer;
+      flex-shrink: 0;
+    }
+    .notif-bar.show { display: flex; }
+    .notif-bar span { color: var(--accent); font-weight: 700; }
+
+    .messages-wrap {
+      flex: 1; overflow-y: auto; padding: 14px 12px;
+      display: flex; flex-direction: column; gap: 3px;
+      scroll-behavior: smooth;
+    }
+    .messages-wrap::-webkit-scrollbar { width: 4px; }
+    .messages-wrap::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 4px; }
+
+    /* Bubbles */
+    .msg { display: flex; flex-direction: column; max-width: 78%; }
+    .msg.me { align-self: flex-end; align-items: flex-end; }
+    .msg.them { align-self: flex-start; align-items: flex-start; }
+    .msg.system { align-self: center; max-width: 92%; }
+    .bubble {
+      padding: 9px 13px; border-radius: 18px;
+      font-size: 15px; line-height: 1.45; word-break: break-word;
+    }
+    .me .bubble { background: var(--bubble-me); border-radius: 18px 18px 4px 18px; }
+    .them .bubble { background: var(--bubble-them); border-radius: 18px 18px 18px 4px; }
+    .system .bubble {
+      background: rgba(0,200,150,.1); border: 1px solid rgba(0,200,150,.2);
+      color: var(--text2); font-size: 13px; border-radius: 10px;
+      padding: 6px 14px; text-align: center; font-style: italic;
+    }
+    .msg-sender { font-size: 12px; color: var(--accent); font-weight: 700; margin-bottom: 3px; padding-left: 2px; }
+    .msg-time { font-size: 11px; color: var(--text2); margin-top: 3px; padding: 0 2px; }
+    .msg-group-gap { height: 8px; }
+
+    /* Consecutive same-sender grouping */
+    .me .bubble.first { border-radius: 18px 18px 4px 18px; }
+    .me .bubble.mid   { border-radius: 18px 4px 4px 18px; }
+    .me .bubble.last  { border-radius: 18px 4px 18px 18px; }
+    .them .bubble.first { border-radius: 18px 18px 18px 4px; }
+    .them .bubble.mid   { border-radius: 4px 18px 18px 4px; }
+    .them .bubble.last  { border-radius: 4px 18px 18px 18px; }
+
+    /* Input area */
+    .chat-input-area {
+      background: var(--surface);
+      display: flex; align-items: flex-end; gap: 10px;
+      padding: 10px 12px;
+      padding-bottom: calc(10px + env(safe-area-inset-bottom));
+      border-top: 1px solid rgba(255,255,255,.06);
+      flex-shrink: 0;
+    }
+    .msg-textarea {
+      flex: 1; background: var(--surface2);
+      border: none; border-radius: 22px;
+      padding: 11px 16px; font-size: 15px; color: var(--text);
+      outline: none; resize: none;
+      max-height: 130px; line-height: 1.45;
+      font-family: inherit;
+    }
+    .msg-textarea::placeholder { color: var(--text2); }
+    .send-btn {
+      width: 46px; height: 46px; border-radius: 50%;
+      background: var(--accent); border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; flex-shrink: 0; transition: all .15s;
+    }
+    .send-btn:hover { background: var(--accent2); transform: scale(1.05); }
+    .send-btn:active { transform: scale(.94); }
+    .send-btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+
+    /* ─── TOAST ─── */
+    #toast {
+      position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
+      background: #2d3f53; color: var(--text);
+      padding: 10px 20px; border-radius: 24px;
+      font-size: 14px; z-index: 9999;
+      white-space: nowrap; pointer-events: none;
+      transition: opacity .3s; opacity: 0;
+    }
+    #toast.show { opacity: 1; }
+
+    /* ─── LOADING ─── */
+    #loadingScreen { align-items: center; justify-content: center; }
+    .spinner { width: 40px; height: 40px; border: 3px solid var(--surface2); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ─── ROOM CODE DISPLAY ─── */
+    .code-display-box {
+      background: var(--surface2);
+      border-radius: 10px;
+      padding: 12px 16px;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+    .code-display-label { font-size: 11px; color: var(--text2); font-weight: 600; letter-spacing: 1px; text-transform: uppercase; }
+    .code-display-value { font-size: 30px; font-weight: 800; letter-spacing: 8px; color: var(--accent); margin-top: 4px; }
+
+    /* Empty state */
+    .empty-chat { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: .4; }
+    .empty-chat-icon { font-size: 56px; margin-bottom: 12px; }
+    .empty-chat-text { font-size: 15px; }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════ LOADING SCREEN ═══════════════ -->
+<div id="loadingScreen" class="screen active">
+  <div class="spinner"></div>
+</div>
+
+<!-- ═══════════════ HOME SCREEN ═══════════════ -->
+<div id="homeScreen" class="screen">
+  <div class="home-hero">
+    <div class="logo-ring">💬</div>
+    <div class="home-title">Chatsapp</div>
+    <div class="home-subtitle">Instant rooms. No account needed.</div>
+  </div>
+  <div class="home-actions">
+    <div class="action-card primary" onclick="openCreateModal()">
+      <div class="action-icon">✨</div>
+      <div>
+        <div class="action-title">Create New Room</div>
+        <div class="action-desc">Start a fresh chat, get a room code</div>
+      </div>
+      <div class="action-arrow">›</div>
+    </div>
+    <div class="action-card" onclick="openJoinModal()">
+      <div class="action-icon">🔑</div>
+      <div>
+        <div class="action-title">Join with Code</div>
+        <div class="action-desc">Enter a 6-character room code</div>
+      </div>
+      <div class="action-arrow">›</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ CHAT SCREEN ═══════════════ -->
+<div id="chatScreen" class="screen">
+  <div class="chat-header">
+    <button class="header-back" onclick="leaveRoom()">‹</button>
+    <div class="header-avatar">💬</div>
+    <div class="header-info">
+      <div class="header-name" id="headerName">Room</div>
+      <div class="header-code" id="headerCode">Code: ——</div>
+    </div>
+    <div class="header-actions">
+      <button class="icon-btn" onclick="copyCode()" title="Copy code">📋</button>
+      <button class="icon-btn" onclick="shareRoom()" title="Share">↗</button>
+    </div>
+  </div>
+
+  <div class="notif-bar" id="notifBar" onclick="requestNotifPermission()">
+    <span>🔔</span>
+    <div>Tap to <span>enable notifications</span> — get messages even when app is closed</div>
+  </div>
+
+  <div class="messages-wrap" id="msgWrap">
+    <div class="empty-chat" id="emptyState">
+      <div class="empty-chat-icon">💬</div>
+      <div class="empty-chat-text">No messages yet. Say hi!</div>
+    </div>
+  </div>
+
+  <div class="chat-input-area">
+    <textarea class="msg-textarea" id="msgInput" placeholder="Message..." rows="1"
+      onkeydown="handleKey(event)" oninput="autoGrow(this)"></textarea>
+    <button class="send-btn" id="sendBtn" onclick="sendMsg()">➤</button>
+  </div>
+</div>
+
+<!-- ═══════════════ MODAL: JOIN ROOM ═══════════════ -->
+<div class="modal-backdrop" id="joinModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">🔑 Enter Room Code</div>
+    <div class="field-label">6-character code</div>
+    <input class="text-input code-input" id="codeInput" maxlength="6" placeholder="XXXXXX"
+      oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')"
+      onkeydown="if(event.key==='Enter')checkCode()">
+    <div class="error-msg" id="codeError">❌ Invalid code — room not found.</div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="closeModal('joinModal')">Cancel</button>
+      <button class="btn btn-accent" id="checkBtn" onclick="checkCode()">Next →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ MODAL: ENTER NAME ═══════════════ -->
+<div class="modal-backdrop" id="nameModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="nameModalTitle">👤 What's your name?</div>
+    <div class="field-label">Display name</div>
+    <input class="text-input" id="nameInput" maxlength="30" placeholder="Enter your name..."
+      onkeydown="if(event.key==='Enter')confirmName()">
+    <div class="error-msg" id="nameError">⚠️ Please enter your name.</div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="closeModal('nameModal')">Cancel</button>
+      <button class="btn btn-accent" id="nameConfirmBtn" onclick="confirmName()">Enter Room</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ MODAL: ROOM CREATED ═══════════════ -->
+<div class="modal-backdrop" id="createdModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">🎉 Room Created!</div>
+    <p style="color:var(--text2);font-size:14px;margin-bottom:16px;">Share this code with people you want to chat with:</p>
+    <div class="code-display-box">
+      <div class="code-display-label">Room Code</div>
+      <div class="code-display-value" id="createdCodeDisplay">——</div>
+    </div>
+    <button class="btn btn-ghost" style="width:100%;margin-bottom:10px;" onclick="copyCreatedCode()">📋 Copy Code</button>
+    <button class="btn btn-accent" style="width:100%;" onclick="goToChat()">Go to Chat →</button>
+  </div>
+</div>
+
+<!-- ═══════════════ TOAST ═══════════════ -->
+<div id="toast"></div>
+
+<!-- ═══════════════ FIREBASE SDK ═══════════════ -->
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-messaging-compat.js"></script>
+
+<script>
+// ════════════════════════════════════════════════
+//  ⚠️  FIREBASE CONFIG — Replace with your own!
+//  (Firebase Console → Project Settings → SDK)
+// ════════════════════════════════════════════════
+const FB_CONFIG = {
+  apiKey:            "AIzaSyDNhKKQVUZapEMS5Dq2LaSXlVe6qPkHQpI",
+  authDomain:        "chatsapp-khush.firebaseapp.com",
+  databaseURL:       "https://chatsapp-khush-default-rtdb.firebaseio.com",
+  projectId:         "chatsapp-khush",
+  storageBucket:     "chatsapp-khush.firebasestorage.app",
+  messagingSenderId: "794097187007",
+  appId:             "1:794097187007:web:65a7d1724006c25d53ae0a"
+};
+// VAPID key from Firebase Console → Cloud Messaging → Web Push Certificates
+const VAPID_KEY = "BAdydGYDbneeDde-GkjWu-F0ZwymvIw5VIGoCru2oWWlZS1aOcs7a9Usn5DFB3rnLYTnreI-jC0tiMUg2S07UhU";
+// ════════════════════════════════════════════════
+
+firebase.initializeApp(FB_CONFIG);
+const db = firebase.database();
+let messaging = null;
+try { messaging = firebase.messaging(); } catch(e) {}
+
+// ── State ──────────────────────────────────────
+let state = {
+  userId:    null,
+  roomId:    null,
+  username:  null,
+  pendingAction: null,   // 'create' | 'join'
+  msgListener: null,
+  lastKey:   null,
+};
+
+// ── Boot ──────────────────────────────────────
+window.addEventListener('load', async () => {
+  // Generate or restore userId
+  state.userId = ls('userId') || uid(20);
+  ls('userId', state.userId);
+
+  // Register service worker
+  if ('serviceWorker' in navigator) {
+    try {
+      await navigator.serviceWorker.register('./firebase-messaging-sw.js');
+    } catch(e) { console.warn('SW:', e); }
+  }
+
+  // Check for saved room
+  const savedRoom = ls('roomId');
+  const savedUser = ls('username');
+
+  if (savedRoom && savedUser) {
+    try {
+      const snap = await db.ref(`rooms/${savedRoom}`).once('value');
+      if (snap.exists()) {
+        state.roomId   = savedRoom;
+        state.username = savedUser;
+        await enterRoom();
+        return;
+      }
+    } catch(e) {}
+    ls('roomId', null);
+  }
+
+  showScreen('homeScreen');
+});
+
+// ── Screen helpers ─────────────────────────────
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+function closeAllModals() {
+  document.querySelectorAll('.modal-backdrop').forEach(m => m.classList.remove('open'));
+}
+
+// ── Create Room ────────────────────────────────
+function openCreateModal() {
+  state.pendingAction = 'create';
+  document.getElementById('nameModalTitle').textContent = '👤 Create Room — Your Name';
+  document.getElementById('nameInput').value = ls('username') || '';
+  document.getElementById('nameError').style.display = 'none';
+  openModal('nameModal');
+  setTimeout(() => document.getElementById('nameInput').focus(), 300);
+}
+
+// ── Join Room ──────────────────────────────────
+function openJoinModal() {
+  document.getElementById('codeInput').value = '';
+  document.getElementById('codeError').style.display = 'none';
+  openModal('joinModal');
+  setTimeout(() => document.getElementById('codeInput').focus(), 300);
+}
+
+async function checkCode() {
+  const code = document.getElementById('codeInput').value.trim().toUpperCase();
+  const errEl = document.getElementById('codeError');
+  errEl.style.display = 'none';
+
+  if (code.length !== 6) {
+    errEl.textContent = '⚠️ Code must be exactly 6 characters.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  const btn = document.getElementById('checkBtn');
+  btn.textContent = 'Checking…'; btn.disabled = true;
+
+  try {
+    const snap = await db.ref(`rooms/${code}`).once('value');
+    if (!snap.exists()) {
+      errEl.textContent = '❌ Invalid code — room not found.';
+      errEl.style.display = 'block';
+      btn.textContent = 'Next →'; btn.disabled = false;
+      return;
+    }
+  } catch(e) {
+    errEl.textContent = '⚠️ Connection error. Try again.';
+    errEl.style.display = 'block';
+    btn.textContent = 'Next →'; btn.disabled = false;
+    return;
+  }
+
+  state.roomId = code;
+  state.pendingAction = 'join';
+  closeModal('joinModal');
+
+  document.getElementById('nameModalTitle').textContent = '👤 Join Room — Your Name';
+  document.getElementById('nameInput').value = ls('username') || '';
+  document.getElementById('nameError').style.display = 'none';
+  openModal('nameModal');
+  btn.textContent = 'Next →'; btn.disabled = false;
+  setTimeout(() => document.getElementById('nameInput').focus(), 300);
+}
+
+// ── Name Confirm ───────────────────────────────
+async function confirmName() {
+  const name = document.getElementById('nameInput').value.trim();
+  const errEl = document.getElementById('nameError');
+  errEl.style.display = 'none';
+
+  if (!name) { errEl.style.display = 'block'; return; }
+
+  const btn = document.getElementById('nameConfirmBtn');
+  btn.textContent = 'Entering…'; btn.disabled = true;
+
+  state.username = name;
+  ls('username', name);
+
+  if (state.pendingAction === 'create') {
+    state.roomId = genCode();
+    try {
+      await db.ref(`rooms/${state.roomId}`).set({
+        createdAt: Date.now(),
+        createdBy: state.userId,
+      });
+    } catch(e) {
+      btn.textContent = 'Enter Room'; btn.disabled = false;
+      toast('❌ Failed to create room. Check your config.');
+      return;
+    }
+
+    ls('roomId', state.roomId);
+    closeModal('nameModal');
+
+    document.getElementById('createdCodeDisplay').textContent = state.roomId;
+    openModal('createdModal');
+  } else {
+    ls('roomId', state.roomId);
+    closeModal('nameModal');
+    await enterRoom();
+    sendSystemMsg(`${state.username} has joined the chat 👋`);
+  }
+
+  btn.textContent = 'Enter Room'; btn.disabled = false;
+}
+
+// After room created modal
+async function goToChat() {
+  closeModal('createdModal');
+  await enterRoom();
+  sendSystemMsg(`${state.username} created this room 🎉`);
+}
+
+// ── Enter Room ─────────────────────────────────
+async function enterRoom() {
+  showScreen('chatScreen');
+  document.getElementById('headerName').textContent = `Room · ${state.roomId}`;
+  document.getElementById('headerCode').textContent  = `Code: ${state.roomId}`;
+  document.getElementById('msgWrap').innerHTML =
+    '<div class="empty-chat" id="emptyState"><div class="empty-chat-icon">💬</div><div class="empty-chat-text">Loading messages…</div></div>';
+
+  // Notification banner
+  if (Notification.permission !== 'granted') {
+    document.getElementById('notifBar').classList.add('show');
+  } else {
+    document.getElementById('notifBar').classList.remove('show');
+    registerFCMToken();
+  }
+
+  // Detach old listener
+  if (state.msgListener) { state.msgListener.off(); state.msgListener = null; }
+
+  // Load existing messages
+  state.lastKey = null;
+  try {
+    const snap = await db.ref(`rooms/${state.roomId}/messages`)
+      .orderByKey().limitToLast(100).once('value');
+    document.getElementById('msgWrap').innerHTML = '';
+    if (snap.exists()) {
+      snap.forEach(child => {
+        renderMsg(child.val());
+        state.lastKey = child.key;
+      });
+      scrollBottom();
+    } else {
+      document.getElementById('msgWrap').innerHTML =
+        '<div class="empty-chat" id="emptyState"><div class="empty-chat-icon">💬</div><div class="empty-chat-text">No messages yet. Say hi!</div></div>';
+    }
+  } catch(e) { console.error(e); }
+
+  // Listen for new messages
+  let ref = db.ref(`rooms/${state.roomId}/messages`).orderByKey();
+  if (state.lastKey) ref = ref.startAfter(state.lastKey);
+  state.msgListener = ref;
+  ref.on('child_added', snap => {
+    const emptyEl = document.getElementById('emptyState');
+    if (emptyEl) emptyEl.remove();
+    renderMsg(snap.val());
+    state.lastKey = snap.key;
+    scrollBottom();
+  });
+}
+
+function leaveRoom() {
+  if (state.msgListener) { state.msgListener.off(); state.msgListener = null; }
+  ls('roomId', null);
+  state.roomId = null;
+  showScreen('homeScreen');
+}
+
+// ── Render message ─────────────────────────────
+let prevSenderId = null;
+
+function renderMsg(msg) {
+  const wrap = document.getElementById('msgWrap');
+  const div = document.createElement('div');
+
+  if (msg.type === 'system') {
+    div.className = 'msg system';
+    div.innerHTML = `<div class="bubble">${esc(msg.text)}</div>`;
+    prevSenderId = null;
+  } else {
+    const isMe = msg.userId === state.userId;
+    const newSender = msg.userId !== prevSenderId;
+    if (newSender && prevSenderId !== null) {
+      wrap.appendChild(Object.assign(document.createElement('div'), { className: 'msg-group-gap' }));
+    }
+    div.className = `msg ${isMe ? 'me' : 'them'}`;
+    const showName = !isMe && newSender;
+    div.innerHTML = `
+      ${showName ? `<div class="msg-sender">${esc(msg.sender)}</div>` : ''}
+      <div class="bubble">${esc(msg.text)}</div>
+      <div class="msg-time">${fmtTime(msg.ts)}</div>
+    `;
+    prevSenderId = msg.userId;
+  }
+
+  wrap.appendChild(div);
+}
+
+// ── Send message ───────────────────────────────
+function sendMsg() {
+  const inp = document.getElementById('msgInput');
+  const text = inp.value.trim();
+  if (!text || !state.roomId) return;
+  inp.value = ''; autoGrow(inp);
+
+  db.ref(`rooms/${state.roomId}/messages`).push({
+    text, sender: state.username,
+    userId: state.userId,
+    ts: Date.now(), type: 'chat'
+  }).catch(() => toast('❌ Failed to send. Check connection.'));
+}
+
+function sendSystemMsg(text) {
+  db.ref(`rooms/${state.roomId}/messages`).push({
+    text, type: 'system', ts: Date.now()
+  });
+}
+
+// ── Notifications ──────────────────────────────
+async function requestNotifPermission() {
+  if (!messaging) { toast('❌ Push not supported in this browser.'); return; }
+  const perm = await Notification.requestPermission();
+  if (perm === 'granted') {
+    document.getElementById('notifBar').classList.remove('show');
+    toast('🔔 Notifications enabled!');
+    registerFCMToken();
+  } else {
+    toast('🔕 Permission denied.');
+  }
+}
+
+async function registerFCMToken() {
+  if (!messaging || !VAPID_KEY || VAPID_KEY === 'YOUR_VAPID_KEY') return;
+  try {
+    const token = await messaging.getToken({ vapidKey: VAPID_KEY });
+    if (token && state.roomId) {
+      await db.ref(`rooms/${state.roomId}/tokens/${state.userId}`).set(token);
+    }
+  } catch(e) { console.warn('FCM token:', e); }
+}
+
+// ── Share / Copy ───────────────────────────────
+function copyCode() {
+  copyText(state.roomId);
+  toast('📋 Room code copied!');
+}
+function copyCreatedCode() {
+  copyText(state.roomId);
+  toast('📋 Code copied! Share it with friends.');
+}
+async function shareRoom() {
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: 'Join my Chatsapp room', text: `Use code: ${state.roomId} to join my chat!` });
+    } catch(e) {}
+  } else { copyCode(); }
+}
+function copyText(t) {
+  if (navigator.clipboard) { navigator.clipboard.writeText(t); }
+  else { const ta = document.createElement('textarea'); ta.value=t; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
+}
+
+// ── Helpers ────────────────────────────────────
+function uid(n) {
+  return Array.from(crypto.getRandomValues(new Uint8Array(n)))
+    .map(b => b.toString(36)).join('').substring(0, n);
+}
+function genCode() {
+  const C = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  return Array.from({length:6}, () => C[Math.floor(Math.random()*C.length)]).join('');
+}
+function esc(s='') {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+}
+function fmtTime(ts) {
+  return new Date(ts).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+}
+function scrollBottom() {
+  const w = document.getElementById('msgWrap');
+  w.scrollTop = w.scrollHeight;
+}
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); }
+}
+function autoGrow(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 130) + 'px';
+}
+function toast(msg, ms=3000) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), ms);
+}
+function ls(k, v) {
+  if (v === undefined) { try { return localStorage.getItem('qc_'+k); } catch(e) { return null; } }
+  if (v === null) { try { localStorage.removeItem('qc_'+k); } catch(e) {} }
+  else { try { localStorage.setItem('qc_'+k, v); } catch(e) {} }
+}
+
+// Close modal on backdrop click
+document.querySelectorAll('.modal-backdrop').forEach(el => {
+  el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+});
+</script>
+</body>
+</html>

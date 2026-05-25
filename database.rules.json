@@ -1,0 +1,21 @@
+{
+  "rules": {
+    "rooms": {
+      "$roomId": {
+        ".read": true,
+        ".write": true,
+        "messages": {
+          ".read": true,
+          ".write": true,
+          "$msgId": {
+            ".validate": "newData.hasChildren(['type', 'ts'])"
+          }
+        },
+        "tokens": {
+          ".read": true,
+          ".write": true
+        }
+      }
+    }
+  }
+}
