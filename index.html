@@ -25,7 +25,6 @@
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
 
-    /* ─── SCREENS ─── */
     .screen { display: none; position: fixed; inset: 0; flex-direction: column; background: var(--bg); }
     .screen.active { display: flex; }
 
@@ -53,9 +52,7 @@
       border-radius: var(--radius);
       padding: 16px 18px;
       display: flex; align-items: center; gap: 14px;
-      cursor: pointer;
-      transition: transform .15s, background .15s;
-      user-select: none;
+      cursor: pointer; transition: transform .15s, background .15s; user-select: none;
     }
     .action-card:active { transform: scale(.97); background: var(--surface2); }
     .action-card.primary { border-color: rgba(0,200,150,.3); background: rgba(0,200,150,.08); }
@@ -71,10 +68,9 @@
     .saved-room-card {
       background: var(--surface);
       border: 1px solid rgba(255,255,255,.06);
-      border-radius: 12px;
-      padding: 12px 14px;
+      border-radius: 12px; padding: 12px 14px;
       display: flex; align-items: center; gap: 12px;
-      cursor: pointer; transition: background .15s;
+      cursor: pointer; transition: background .15s; position: relative;
     }
     .saved-room-card:active { background: var(--surface2); }
     .saved-room-icon { font-size: 20px; flex-shrink: 0; }
@@ -83,6 +79,14 @@
     .saved-room-code { font-size: 12px; color: var(--text2); margin-top: 2px; }
     .saved-room-del { background: none; border: none; color: var(--text2); font-size: 18px; cursor: pointer; padding: 4px 8px; border-radius: 8px; flex-shrink: 0; }
     .saved-room-del:active { color: var(--red); }
+    /* Unread badge on saved room card */
+    .unread-badge {
+      background: var(--accent); color: #000;
+      font-size: 11px; font-weight: 800;
+      min-width: 20px; height: 20px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      padding: 0 5px; flex-shrink: 0;
+    }
 
     /* ─── MODALS ─── */
     .modal-backdrop {
@@ -93,10 +97,8 @@
     .modal-backdrop.open { display: flex; animation: bdfadeIn .2s ease; }
     @keyframes bdfadeIn { from { opacity: 0; } to { opacity: 1; } }
     .modal-sheet {
-      background: var(--surface);
-      border-radius: 22px 22px 0 0;
-      width: 100%; max-width: 480px;
-      padding: 28px 24px 36px;
+      background: var(--surface); border-radius: 22px 22px 0 0;
+      width: 100%; max-width: 480px; padding: 28px 24px 36px;
       animation: slideUp .25s cubic-bezier(.32,1,.42,1);
     }
     @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
@@ -105,10 +107,8 @@
     .field-label { font-size: 12px; color: var(--text2); margin-bottom: 8px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase; }
     .text-input {
       width: 100%; background: var(--surface2);
-      border: 1.5px solid transparent;
-      border-radius: 12px; padding: 14px 16px;
-      font-size: 16px; color: var(--text); outline: none;
-      transition: border-color .2s;
+      border: 1.5px solid transparent; border-radius: 12px;
+      padding: 14px 16px; font-size: 16px; color: var(--text); outline: none; transition: border-color .2s;
     }
     .text-input:focus { border-color: var(--accent); }
     .text-input::placeholder { color: var(--text2); }
@@ -123,12 +123,9 @@
 
     /* ─── CHAT SCREEN ─── */
     .chat-header {
-      background: var(--surface);
-      display: flex; align-items: center; gap: 12px;
-      padding: 12px 16px;
-      padding-top: calc(12px + env(safe-area-inset-top));
-      border-bottom: 1px solid rgba(255,255,255,.06);
-      flex-shrink: 0;
+      background: var(--surface); display: flex; align-items: center; gap: 12px;
+      padding: 12px 16px; padding-top: calc(12px + env(safe-area-inset-top));
+      border-bottom: 1px solid rgba(255,255,255,.06); flex-shrink: 0;
     }
     .header-back { background: none; border: none; color: var(--text2); font-size: 22px; cursor: pointer; padding: 4px 8px 4px 0; }
     .header-avatar {
@@ -143,26 +140,44 @@
     .header-actions { display: flex; gap: 4px; }
     .icon-btn { background: none; border: none; color: var(--text2); font-size: 20px; cursor: pointer; padding: 8px; border-radius: 8px; }
 
+    /* ─── NOTIFICATION PERMISSION BAR ─── */
     .notif-bar {
-      background: rgba(0,200,150,.08);
-      border-bottom: 1px solid rgba(0,200,150,.15);
-      padding: 10px 16px;
-      display: none; align-items: center; gap: 10px;
-      font-size: 13px; color: var(--text2); cursor: pointer;
-      flex-shrink: 0;
+      background: rgba(0,200,150,.08); border-bottom: 1px solid rgba(0,200,150,.15);
+      padding: 10px 16px; display: none; align-items: center; gap: 10px;
+      font-size: 13px; color: var(--text2); cursor: pointer; flex-shrink: 0;
     }
     .notif-bar.show { display: flex; }
     .notif-bar span { color: var(--accent); font-weight: 700; }
 
+    /* ─── IN-APP NOTIFICATION TOAST (top) ─── */
+    #inAppNotif {
+      position: fixed; top: 16px; left: 12px; right: 12px;
+      background: var(--surface2);
+      border: 1px solid rgba(0,200,150,.25);
+      border-radius: 16px; padding: 12px 14px;
+      display: flex; align-items: center; gap: 12px;
+      z-index: 8888; cursor: pointer;
+      transform: translateY(-120px); opacity: 0;
+      transition: transform .35s cubic-bezier(.32,1,.42,1), opacity .35s;
+      box-shadow: 0 8px 32px rgba(0,0,0,.4);
+      max-width: 480px; margin: 0 auto;
+    }
+    #inAppNotif.show { transform: translateY(0); opacity: 1; }
+    .ian-icon { font-size: 24px; flex-shrink: 0; }
+    .ian-body { flex: 1; min-width: 0; }
+    .ian-room { font-size: 11px; color: var(--accent); font-weight: 700; text-transform: uppercase; letter-spacing: .5px; }
+    .ian-sender { font-size: 13px; font-weight: 700; margin-top: 1px; }
+    .ian-text { font-size: 13px; color: var(--text2); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ian-close { background: none; border: none; color: var(--text2); font-size: 18px; cursor: pointer; flex-shrink: 0; padding: 2px 4px; }
+
+    /* ─── MESSAGES ─── */
     .messages-wrap {
       flex: 1; overflow-y: auto; padding: 14px 12px;
-      display: flex; flex-direction: column; gap: 3px;
-      scroll-behavior: smooth;
+      display: flex; flex-direction: column; gap: 3px; scroll-behavior: smooth;
     }
     .messages-wrap::-webkit-scrollbar { width: 4px; }
     .messages-wrap::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 4px; }
 
-    /* Bubbles */
     .msg { display: flex; flex-direction: column; max-width: 78%; }
     .msg.me { align-self: flex-end; align-items: flex-end; }
     .msg.them { align-self: flex-start; align-items: flex-start; }
@@ -179,22 +194,16 @@
     .msg-time { font-size: 11px; color: var(--text2); margin-top: 3px; padding: 0 2px; }
     .msg-group-gap { height: 8px; }
 
-    /* Input area */
+    /* ─── INPUT ─── */
     .chat-input-area {
-      background: var(--surface);
-      display: flex; align-items: flex-end; gap: 10px;
-      padding: 10px 12px;
-      padding-bottom: calc(10px + env(safe-area-inset-bottom));
-      border-top: 1px solid rgba(255,255,255,.06);
-      flex-shrink: 0;
+      background: var(--surface); display: flex; align-items: flex-end; gap: 10px;
+      padding: 10px 12px; padding-bottom: calc(10px + env(safe-area-inset-bottom));
+      border-top: 1px solid rgba(255,255,255,.06); flex-shrink: 0;
     }
     .msg-textarea {
-      flex: 1; background: var(--surface2);
-      border: none; border-radius: 22px;
+      flex: 1; background: var(--surface2); border: none; border-radius: 22px;
       padding: 11px 16px; font-size: 15px; color: var(--text);
-      outline: none; resize: none;
-      max-height: 130px; line-height: 1.45;
-      font-family: inherit;
+      outline: none; resize: none; max-height: 130px; line-height: 1.45; font-family: inherit;
     }
     .msg-textarea::placeholder { color: var(--text2); }
     .send-btn {
@@ -206,13 +215,11 @@
     .send-btn:active { transform: scale(.94); }
     .send-btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
 
-    /* ─── TOAST ─── */
+    /* ─── TOAST (bottom) ─── */
     #toast {
       position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
-      background: #2d3f53; color: var(--text);
-      padding: 10px 20px; border-radius: 24px;
-      font-size: 14px; z-index: 9999;
-      white-space: nowrap; pointer-events: none;
+      background: #2d3f53; color: var(--text); padding: 10px 20px; border-radius: 24px;
+      font-size: 14px; z-index: 9999; white-space: nowrap; pointer-events: none;
       transition: opacity .3s; opacity: 0;
     }
     #toast.show { opacity: 1; }
@@ -222,15 +229,10 @@
     .spinner { width: 40px; height: 40px; border: 3px solid var(--surface2); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ─── ROOM CODE DISPLAY ─── */
-    .code-display-box {
-      background: var(--surface2); border-radius: 10px;
-      padding: 12px 16px; text-align: center; margin-bottom: 16px;
-    }
+    .code-display-box { background: var(--surface2); border-radius: 10px; padding: 12px 16px; text-align: center; margin-bottom: 16px; }
     .code-display-label { font-size: 11px; color: var(--text2); font-weight: 600; letter-spacing: 1px; text-transform: uppercase; }
     .code-display-value { font-size: 30px; font-weight: 800; letter-spacing: 8px; color: var(--accent); margin-top: 4px; }
 
-    /* Empty state */
     .empty-chat { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: .4; }
     .empty-chat-icon { font-size: 56px; margin-bottom: 12px; }
     .empty-chat-text { font-size: 15px; }
@@ -238,19 +240,18 @@
 </head>
 <body>
 
-<!-- ═══════════════ LOADING ═══════════════ -->
+<!-- ═══ LOADING ═══ -->
 <div id="loadingScreen" class="screen active">
   <div class="spinner"></div>
 </div>
 
-<!-- ═══════════════ HOME ═══════════════ -->
+<!-- ═══ HOME ═══ -->
 <div id="homeScreen" class="screen">
   <div class="home-hero">
     <div class="logo-ring">💬</div>
     <div class="home-title">Chatsapp</div>
     <div class="home-subtitle">Made by Khush</div>
   </div>
-
   <div class="home-actions">
     <div class="action-card primary" onclick="openCreateModal()">
       <div class="action-icon">✨</div>
@@ -269,14 +270,13 @@
       <div class="action-arrow">›</div>
     </div>
   </div>
-
   <div class="saved-section" id="savedSection" style="display:none;">
     <div class="saved-label">💾 Saved Rooms</div>
     <div class="saved-list" id="savedList"></div>
   </div>
 </div>
 
-<!-- ═══════════════ CHAT ═══════════════ -->
+<!-- ═══ CHAT ═══ -->
 <div id="chatScreen" class="screen">
   <div class="chat-header">
     <button class="header-back" onclick="leaveRoom()">‹</button>
@@ -290,19 +290,16 @@
       <button class="icon-btn" onclick="shareRoom()">↗</button>
     </div>
   </div>
-
   <div class="notif-bar" id="notifBar" onclick="requestNotifPermission()">
     <span>🔔</span>
-    <div>Tap to <span>enable notifications</span> — get messages when app is closed</div>
+    <div>Tap to <span>enable notifications</span> — get messages even when app is closed</div>
   </div>
-
   <div class="messages-wrap" id="msgWrap">
     <div class="empty-chat" id="emptyState">
       <div class="empty-chat-icon">💬</div>
       <div class="empty-chat-text">No messages yet. Say hi!</div>
     </div>
   </div>
-
   <div class="chat-input-area">
     <textarea class="msg-textarea" id="msgInput" placeholder="Message..." rows="1"
       onkeydown="handleKey(event)" oninput="autoGrow(this)"></textarea>
@@ -310,7 +307,7 @@
   </div>
 </div>
 
-<!-- ═══════════════ MODAL: JOIN ═══════════════ -->
+<!-- ═══ MODAL: JOIN ═══ -->
 <div class="modal-backdrop" id="joinModal">
   <div class="modal-sheet">
     <div class="modal-handle"></div>
@@ -327,7 +324,7 @@
   </div>
 </div>
 
-<!-- ═══════════════ MODAL: NAME ═══════════════ -->
+<!-- ═══ MODAL: NAME ═══ -->
 <div class="modal-backdrop" id="nameModal">
   <div class="modal-sheet">
     <div class="modal-handle"></div>
@@ -343,7 +340,7 @@
   </div>
 </div>
 
-<!-- ═══════════════ MODAL: ROOM CREATED ═══════════════ -->
+<!-- ═══ MODAL: ROOM CREATED ═══ -->
 <div class="modal-backdrop" id="createdModal">
   <div class="modal-sheet">
     <div class="modal-handle"></div>
@@ -358,12 +355,12 @@
   </div>
 </div>
 
-<!-- ═══════════════ MODAL: SAVE ROOM ═══════════════ -->
+<!-- ═══ MODAL: SAVE ROOM ═══ -->
 <div class="modal-backdrop" id="saveModal">
   <div class="modal-sheet">
     <div class="modal-handle"></div>
     <div class="modal-title">💾 Save This Room?</div>
-    <p style="color:var(--text2);font-size:14px;margin-bottom:16px;">Ek naam do — home screen pe dikheга</p>
+    <p style="color:var(--text2);font-size:14px;margin-bottom:16px;">Ek naam do — home screen pe dikhega</p>
     <div class="field-label">Room Nickname</div>
     <input class="text-input" id="saveNameInput" maxlength="30" placeholder="jaise: Friends Group, Office..."
       onkeydown="if(event.key==='Enter')confirmSave()">
@@ -374,7 +371,18 @@
   </div>
 </div>
 
-<!-- ═══════════════ TOAST ═══════════════ -->
+<!-- ═══ IN-APP NOTIFICATION ═══ -->
+<div id="inAppNotif">
+  <div class="ian-icon">💬</div>
+  <div class="ian-body">
+    <div class="ian-room" id="ianRoom">Room Name</div>
+    <div class="ian-sender" id="ianSender">Someone</div>
+    <div class="ian-text" id="ianText">Message text here</div>
+  </div>
+  <button class="ian-close" onclick="hideInAppNotif()">✕</button>
+</div>
+
+<!-- ═══ TOAST ═══ -->
 <div id="toast"></div>
 
 <!-- Firebase SDKs -->
@@ -409,43 +417,266 @@ let state = {
   pendingAction: null, msgListener: null, lastKey: null,
 };
 
-// ── E2E Encryption (AES-GCM 256-bit) ───
+// ── Background listeners for saved rooms ──
+// roomId → Firebase ref (for rooms not currently open)
+let bgListeners = {};
+// unread counts per roomId
+let unreadCounts = {};
+// inAppNotif timer
+let ianTimer = null;
+
+// ════════════════════════════════════════
+//  🔊 TING-TONG SOUND (Web Audio API)
+//  No file needed — generated in browser
+// ════════════════════════════════════════
+let audioCtx = null;
+
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function playTingTong() {
+  try {
+    const ctx = getAudioCtx();
+    // Note 1: TING (higher)
+    playNote(ctx, 1046.50, 0,    0.18, 'sine');   // C6
+    // Note 2: TONG (lower)
+    playNote(ctx, 783.99, 0.20, 0.22, 'sine');    // G5
+  } catch(e) { console.warn('Audio:', e); }
+}
+
+function playNote(ctx, freq, startOffset, duration, type) {
+  const osc  = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, ctx.currentTime + startOffset);
+  gain.gain.setValueAtTime(0.35, ctx.currentTime + startOffset);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + startOffset + duration);
+  osc.start(ctx.currentTime + startOffset);
+  osc.stop(ctx.currentTime + startOffset + duration + 0.05);
+}
+
+// ════════════════════════════════════════
+//  🔔 NOTIFICATION SYSTEM
+// ════════════════════════════════════════
+
+// Request permission + register FCM token
+async function requestNotifPermission() {
+  if (!('Notification' in window)) { toast('❌ Notifications not supported.'); return; }
+  const perm = await Notification.requestPermission();
+  if (perm === 'granted') {
+    document.getElementById('notifBar').classList.remove('show');
+    toast('🔔 Notifications enabled!');
+    playTingTong(); // preview the sound
+    await registerFCMToken();
+    // Start background listeners for all saved rooms
+    startAllBgListeners();
+  } else {
+    toast('🔕 Permission denied. Enable from browser settings.');
+  }
+}
+
+async function registerFCMToken() {
+  if (!messaging || !VAPID_KEY) return;
+  try {
+    const token = await messaging.getToken({ vapidKey: VAPID_KEY });
+    if (token && state.roomId) {
+      await db.ref(`rooms/${state.roomId}/tokens/${state.userId}`).set(token);
+    }
+    // Also register token for all saved rooms
+    if (token) {
+      const rooms = getSavedRooms();
+      const writes = rooms.map(r =>
+        db.ref(`rooms/${r.code}/tokens/${state.userId}`).set(token)
+      );
+      await Promise.all(writes);
+    }
+  } catch(e) { console.warn('FCM token:', e); }
+}
+
+// ── In-app notification popup (top banner) ──
+let ianQueue = [];
+let ianShowing = false;
+
+function showInAppNotif(roomName, sender, text, roomCode) {
+  ianQueue.push({ roomName, sender, text, roomCode });
+  if (!ianShowing) processIanQueue();
+}
+
+function processIanQueue() {
+  if (!ianQueue.length) { ianShowing = false; return; }
+  ianShowing = true;
+  const { roomName, sender, text, roomCode } = ianQueue.shift();
+
+  document.getElementById('ianRoom').textContent  = roomName;
+  document.getElementById('ianSender').textContent = sender;
+  document.getElementById('ianText').textContent   = text;
+
+  const el = document.getElementById('inAppNotif');
+  el.onclick = (e) => {
+    if (e.target.classList.contains('ian-close')) return;
+    hideInAppNotif();
+    openSavedRoomByCode(roomCode);
+  };
+
+  el.classList.add('show');
+  playTingTong();
+
+  if (ianTimer) clearTimeout(ianTimer);
+  ianTimer = setTimeout(() => {
+    hideInAppNotif();
+  }, 5000);
+}
+
+function hideInAppNotif() {
+  const el = document.getElementById('inAppNotif');
+  el.classList.remove('show');
+  if (ianTimer) { clearTimeout(ianTimer); ianTimer = null; }
+  setTimeout(() => { ianShowing = false; processIanQueue(); }, 400);
+}
+
+// ── Web Notification (OS-level, when tab not visible) ──
+function showWebNotif(roomName, sender, text, roomCode) {
+  if (Notification.permission !== 'granted') return;
+  if (document.visibilityState === 'visible' && state.roomId === roomCode) return; // in that room
+
+  const notif = new Notification(`${sender} in ${roomName}`, {
+    body: text,
+    icon: '/icon-192.png',
+    badge: '/badge-72.png',
+    tag: 'chatsapp-' + roomCode,
+    renotify: true,
+    silent: false,
+  });
+  notif.onclick = () => {
+    window.focus();
+    openSavedRoomByCode(roomCode);
+    notif.close();
+  };
+}
+
+// ── Trigger both notification types ──
+function triggerNotification(roomCode, sender, text) {
+  const rooms = getSavedRooms();
+  const saved = rooms.find(r => r.code === roomCode);
+  const roomName = saved ? saved.name : roomCode;
+
+  // Always play sound + in-app banner if different room
+  if (state.roomId !== roomCode) {
+    showInAppNotif(roomName, sender, text, roomCode);
+    // Increment unread
+    unreadCounts[roomCode] = (unreadCounts[roomCode] || 0) + 1;
+    renderSavedRooms();
+  } else if (document.visibilityState !== 'visible') {
+    // Same room but tab hidden
+    showInAppNotif(roomName, sender, text, roomCode);
+  }
+
+  // OS notification if tab not visible
+  if (document.visibilityState !== 'visible') {
+    showWebNotif(roomName, sender, text, roomCode);
+    playTingTong();
+  }
+}
+
+// ── Background listeners for saved rooms ──
+function startAllBgListeners() {
+  const rooms = getSavedRooms();
+  rooms.forEach(r => startBgListener(r.code));
+}
+
+async function startBgListener(roomCode) {
+  if (bgListeners[roomCode]) return; // already listening
+  if (roomCode === state.roomId) return; // already in this room
+
+  // Get last message key first (so we only listen for NEW messages)
+  let lastKey = null;
+  try {
+    const snap = await db.ref(`rooms/${roomCode}/messages`).orderByKey().limitToLast(1).once('value');
+    snap.forEach(child => { lastKey = child.key; });
+  } catch(e) {}
+
+  let ref = db.ref(`rooms/${roomCode}/messages`).orderByKey();
+  if (lastKey) ref = ref.startAfter(lastKey);
+
+  const listener = ref.on('child_added', async snap => {
+    const msg = snap.val();
+    if (!msg || msg.type === 'system') return;
+    if (msg.userId === state.userId) return; // own message
+
+    // Decrypt if possible
+    let plainText = '🔒 New message';
+    try {
+      const key = await deriveRoomKey(roomCode);
+      const combined = Uint8Array.from(atob(msg.text), c => c.charCodeAt(0));
+      const iv = combined.slice(0, 12);
+      const ct = combined.slice(12);
+      const buf = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ct);
+      plainText = new TextDecoder().decode(buf);
+    } catch(e) {}
+
+    triggerNotification(roomCode, msg.sender, plainText);
+  });
+
+  bgListeners[roomCode] = { ref, listener };
+}
+
+function stopBgListener(roomCode) {
+  if (bgListeners[roomCode]) {
+    bgListeners[roomCode].ref.off('child_added', bgListeners[roomCode].listener);
+    delete bgListeners[roomCode];
+  }
+}
+
+// ── FCM foreground handler (when app is open) ──
+if (messaging) {
+  messaging.onMessage(payload => {
+    const data = payload.data || {};
+    const roomCode = data.roomId;
+    const sender   = data.sender || 'Someone';
+    const text     = data.text   || 'New message';
+    if (!roomCode) return;
+    triggerNotification(roomCode, sender, text);
+  });
+}
+
+// ════════════════════════════════════════
+//  🔐 E2E ENCRYPTION (AES-GCM 256-bit)
+// ════════════════════════════════════════
 let roomKey = null;
 
 async function deriveRoomKey(roomCode) {
   const enc = new TextEncoder();
-  const keyMaterial = await crypto.subtle.importKey(
-    'raw', enc.encode(roomCode), 'PBKDF2', false, ['deriveKey']
-  );
+  const km = await crypto.subtle.importKey('raw', enc.encode(roomCode), 'PBKDF2', false, ['deriveKey']);
   return crypto.subtle.deriveKey(
     { name:'PBKDF2', salt: enc.encode('chatsapp-e2e-salt-v1'), iterations:150000, hash:'SHA-256' },
-    keyMaterial,
-    { name:'AES-GCM', length:256 },
-    false, ['encrypt','decrypt']
+    km, { name:'AES-GCM', length:256 }, false, ['encrypt','decrypt']
   );
 }
 
 async function encryptMsg(plainText) {
   const enc = new TextEncoder();
   const iv = crypto.getRandomValues(new Uint8Array(12));
-  const cipherBuf = await crypto.subtle.encrypt({ name:'AES-GCM', iv }, roomKey, enc.encode(plainText));
-  const combined = new Uint8Array(12 + cipherBuf.byteLength);
-  combined.set(iv, 0);
-  combined.set(new Uint8Array(cipherBuf), 12);
+  const buf = await crypto.subtle.encrypt({ name:'AES-GCM', iv }, roomKey, enc.encode(plainText));
+  const combined = new Uint8Array(12 + buf.byteLength);
+  combined.set(iv, 0); combined.set(new Uint8Array(buf), 12);
   return btoa(String.fromCharCode(...combined));
 }
 
 async function decryptMsg(encoded) {
   try {
     const combined = Uint8Array.from(atob(encoded), c => c.charCodeAt(0));
-    const iv = combined.slice(0, 12);
-    const ct = combined.slice(12);
-    const plainBuf = await crypto.subtle.decrypt({ name:'AES-GCM', iv }, roomKey, ct);
-    return new TextDecoder().decode(plainBuf);
+    const buf = await crypto.subtle.decrypt({ name:'AES-GCM', iv: combined.slice(0,12) }, roomKey, combined.slice(12));
+    return new TextDecoder().decode(buf);
   } catch(e) { return '🔒 [Encrypted message]'; }
 }
 
-// ── Boot ───────────────────────────────
+// ════════════════════════════════════════
+//  BOOT
+// ════════════════════════════════════════
 window.addEventListener('load', async () => {
   state.userId = ls('userId') || uid(20);
   ls('userId', state.userId);
@@ -460,8 +691,7 @@ window.addEventListener('load', async () => {
     try {
       const snap = await db.ref(`rooms/${savedRoom}`).once('value');
       if (snap.exists()) {
-        state.roomId = savedRoom;
-        state.username = savedUser;
+        state.roomId = savedRoom; state.username = savedUser;
         await enterRoom();
         return;
       }
@@ -471,30 +701,40 @@ window.addEventListener('load', async () => {
 
   renderSavedRooms();
   showScreen('homeScreen');
+
+  // Start background listeners for saved rooms if permission already granted
+  if (Notification.permission === 'granted') {
+    setTimeout(() => startAllBgListeners(), 1500);
+  }
 });
 
-// ── Screen helpers ─────────────────────
+// ════════════════════════════════════════
+//  SCREEN HELPERS
+// ════════════════════════════════════════
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
 }
-function openModal(id) { document.getElementById(id).classList.add('open'); }
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
-// ── Saved Rooms ────────────────────────
+// ════════════════════════════════════════
+//  SAVED ROOMS
+// ════════════════════════════════════════
 function getSavedRooms() {
   try { return JSON.parse(localStorage.getItem('qc_savedRooms') || '[]'); } catch(e) { return []; }
 }
-function setSavedRooms(rooms) { localStorage.setItem('qc_savedRooms', JSON.stringify(rooms)); }
+function setSavedRooms(r) { localStorage.setItem('qc_savedRooms', JSON.stringify(r)); }
 
 function renderSavedRooms() {
   const rooms = getSavedRooms();
   const section = document.getElementById('savedSection');
-  const list = document.getElementById('savedList');
+  const list    = document.getElementById('savedList');
   if (!rooms.length) { section.style.display = 'none'; return; }
   section.style.display = 'block';
   list.innerHTML = '';
   rooms.forEach((r, i) => {
+    const unread = unreadCounts[r.code] || 0;
     const card = document.createElement('div');
     card.className = 'saved-room-card';
     card.innerHTML = `
@@ -503,6 +743,7 @@ function renderSavedRooms() {
         <div class="saved-room-name">${esc(r.name)}</div>
         <div class="saved-room-code">🔒 ${r.code}</div>
       </div>
+      ${unread ? `<div class="unread-badge">${unread}</div>` : ''}
       <button class="saved-room-del" onclick="deleteSavedRoom(${i},event)">🗑️</button>
     `;
     card.addEventListener('click', () => openSavedRoom(r));
@@ -513,18 +754,26 @@ function renderSavedRooms() {
 function deleteSavedRoom(index, e) {
   e.stopPropagation();
   const rooms = getSavedRooms();
+  const code = rooms[index].code;
+  stopBgListener(code);
   rooms.splice(index, 1);
   setSavedRooms(rooms);
+  delete unreadCounts[code];
   renderSavedRooms();
   toast('🗑️ Room removed.');
 }
 
 async function openSavedRoom(r) {
+  // Clear unread for this room
+  unreadCounts[r.code] = 0;
+  renderSavedRooms();
+
   state.roomId = r.code;
   const savedUser = ls('username');
   if (savedUser) {
     state.username = savedUser;
     ls('roomId', r.code);
+    stopBgListener(r.code); // stop bg listener — we're entering the room
     await enterRoom();
   } else {
     state.pendingAction = 'join';
@@ -533,6 +782,12 @@ async function openSavedRoom(r) {
     document.getElementById('nameError').style.display = 'none';
     openModal('nameModal');
   }
+}
+
+async function openSavedRoomByCode(roomCode) {
+  const rooms = getSavedRooms();
+  const r = rooms.find(x => x.code === roomCode);
+  if (r) await openSavedRoom(r);
 }
 
 function offerSaveRoom() {
@@ -550,6 +805,8 @@ function confirmSave() {
   if (!rooms.some(r => r.code === state.roomId)) {
     rooms.unshift({ code: state.roomId, name, savedAt: Date.now() });
     setSavedRooms(rooms);
+    // Register FCM token for this room too
+    if (Notification.permission === 'granted') registerFCMToken();
   }
   closeModal('saveModal');
   toast('✅ Room saved!');
@@ -557,7 +814,9 @@ function confirmSave() {
 
 function skipSave() { closeModal('saveModal'); }
 
-// ── Create Room ────────────────────────
+// ════════════════════════════════════════
+//  CREATE / JOIN ROOM
+// ════════════════════════════════════════
 function openCreateModal() {
   state.pendingAction = 'create';
   document.getElementById('nameModalTitle').textContent = '👤 Create Room — Your Name';
@@ -567,7 +826,6 @@ function openCreateModal() {
   setTimeout(() => document.getElementById('nameInput').focus(), 300);
 }
 
-// ── Join Room ──────────────────────────
 function openJoinModal() {
   document.getElementById('codeInput').value = '';
   document.getElementById('codeError').style.display = 'none';
@@ -579,55 +837,43 @@ async function checkCode() {
   const code = document.getElementById('codeInput').value.trim().toUpperCase();
   const errEl = document.getElementById('codeError');
   errEl.style.display = 'none';
-  if (code.length !== 6) {
-    errEl.textContent = '⚠️ Code 6 characters ka hona chahiye.';
-    errEl.style.display = 'block'; return;
-  }
+  if (code.length !== 6) { errEl.textContent='⚠️ Code 6 characters ka hona chahiye.'; errEl.style.display='block'; return; }
   const btn = document.getElementById('checkBtn');
   btn.textContent = 'Checking…'; btn.disabled = true;
   try {
     const snap = await db.ref(`rooms/${code}`).once('value');
     if (!snap.exists()) {
-      errEl.textContent = '❌ Invalid code — room not found.';
-      errEl.style.display = 'block';
-      btn.textContent = 'Next →'; btn.disabled = false; return;
+      errEl.textContent='❌ Invalid code — room not found.'; errEl.style.display='block';
+      btn.textContent='Next →'; btn.disabled=false; return;
     }
   } catch(e) {
-    errEl.textContent = '⚠️ Connection error. Try again.';
-    errEl.style.display = 'block';
-    btn.textContent = 'Next →'; btn.disabled = false; return;
+    errEl.textContent='⚠️ Connection error. Try again.'; errEl.style.display='block';
+    btn.textContent='Next →'; btn.disabled=false; return;
   }
-  state.roomId = code;
-  state.pendingAction = 'join';
+  state.roomId = code; state.pendingAction = 'join';
   closeModal('joinModal');
   document.getElementById('nameModalTitle').textContent = '👤 Join Room — Your Name';
   document.getElementById('nameInput').value = ls('username') || '';
   document.getElementById('nameError').style.display = 'none';
   openModal('nameModal');
-  btn.textContent = 'Next →'; btn.disabled = false;
+  btn.textContent='Next →'; btn.disabled=false;
   setTimeout(() => document.getElementById('nameInput').focus(), 300);
 }
 
-// ── Name Confirm ───────────────────────
 async function confirmName() {
   const name = document.getElementById('nameInput').value.trim();
   const errEl = document.getElementById('nameError');
   errEl.style.display = 'none';
-  if (!name) { errEl.style.display = 'block'; return; }
-
+  if (!name) { errEl.style.display='block'; return; }
   const btn = document.getElementById('nameConfirmBtn');
-  btn.textContent = 'Entering…'; btn.disabled = true;
-  state.username = name;
-  ls('username', name);
+  btn.textContent='Entering…'; btn.disabled=true;
+  state.username = name; ls('username', name);
 
   if (state.pendingAction === 'create') {
     state.roomId = genCode();
     try {
       await db.ref(`rooms/${state.roomId}`).set({ createdAt: Date.now(), createdBy: state.userId });
-    } catch(e) {
-      btn.textContent = 'Enter Room'; btn.disabled = false;
-      toast('❌ Failed to create room.'); return;
-    }
+    } catch(e) { btn.textContent='Enter Room'; btn.disabled=false; toast('❌ Failed.'); return; }
     ls('roomId', state.roomId);
     closeModal('nameModal');
     document.getElementById('createdCodeDisplay').textContent = state.roomId;
@@ -635,11 +881,12 @@ async function confirmName() {
   } else {
     ls('roomId', state.roomId);
     closeModal('nameModal');
+    stopBgListener(state.roomId);
     await enterRoom();
     sendSystemMsg(`${state.username} has joined the chat 👋`);
     setTimeout(() => offerSaveRoom(), 800);
   }
-  btn.textContent = 'Enter Room'; btn.disabled = false;
+  btn.textContent='Enter Room'; btn.disabled=false;
 }
 
 async function goToChat() {
@@ -649,31 +896,31 @@ async function goToChat() {
   setTimeout(() => offerSaveRoom(), 800);
 }
 
-// ── Enter Room ─────────────────────────
+// ════════════════════════════════════════
+//  ENTER / LEAVE ROOM
+// ════════════════════════════════════════
 async function enterRoom() {
   showScreen('chatScreen');
-  document.getElementById('headerName').textContent = `Room · ${state.roomId}`;
+  document.getElementById('headerName').textContent = getRoomDisplayName(state.roomId);
   document.getElementById('headerCode').textContent = `🔒 ${state.roomId}`;
   document.getElementById('msgWrap').innerHTML =
     '<div class="empty-chat" id="emptyState"><div class="empty-chat-icon">🔒</div><div class="empty-chat-text">Setting up encryption…</div></div>';
 
-  try {
-    roomKey = await deriveRoomKey(state.roomId);
-  } catch(e) { toast('❌ Encryption setup failed.'); return; }
+  try { roomKey = await deriveRoomKey(state.roomId); }
+  catch(e) { toast('❌ Encryption setup failed.'); return; }
 
   if (Notification.permission !== 'granted') {
     document.getElementById('notifBar').classList.add('show');
   } else {
     document.getElementById('notifBar').classList.remove('show');
-    registerFCMToken();
+    await registerFCMToken();
   }
 
   if (state.msgListener) { state.msgListener.off(); state.msgListener = null; }
 
   state.lastKey = null;
   try {
-    const snap = await db.ref(`rooms/${state.roomId}/messages`)
-      .orderByKey().limitToLast(100).once('value');
+    const snap = await db.ref(`rooms/${state.roomId}/messages`).orderByKey().limitToLast(100).once('value');
     document.getElementById('msgWrap').innerHTML = '';
     if (snap.exists()) {
       const promises = [];
@@ -692,43 +939,55 @@ async function enterRoom() {
   ref.on('child_added', async snap => {
     const emptyEl = document.getElementById('emptyState');
     if (emptyEl) emptyEl.remove();
-    await renderMsg(snap.val());
+    const msg = snap.val();
+    await renderMsg(msg);
     state.lastKey = snap.key;
     scrollBottom();
+    // Play sound for incoming messages (not own)
+    if (msg.type !== 'system' && msg.userId !== state.userId) {
+      playTingTong();
+    }
   });
+}
+
+function getRoomDisplayName(code) {
+  const rooms = getSavedRooms();
+  const saved = rooms.find(r => r.code === code);
+  return saved ? saved.name : `Room · ${code}`;
 }
 
 function leaveRoom() {
   if (state.msgListener) { state.msgListener.off(); state.msgListener = null; }
+  const prevRoom = state.roomId;
   ls('roomId', null);
-  state.roomId = null;
-  roomKey = null;
+  state.roomId = null; roomKey = null;
+  // Resume bg listener for the room we just left
+  if (prevRoom) setTimeout(() => startBgListener(prevRoom), 500);
   renderSavedRooms();
   showScreen('homeScreen');
 }
 
-// ── Render message ─────────────────────
+// ════════════════════════════════════════
+//  RENDER + SEND
+// ════════════════════════════════════════
 let prevSenderId = null;
 
 async function renderMsg(msg) {
   const wrap = document.getElementById('msgWrap');
-  const div = document.createElement('div');
-
+  const div  = document.createElement('div');
   if (msg.type === 'system') {
     div.className = 'msg system';
     div.innerHTML = `<div class="bubble">${esc(msg.text)}</div>`;
     prevSenderId = null;
   } else {
-    const plainText = msg.text ? await decryptMsg(msg.text) : '';
-    const isMe = msg.userId === state.userId;
-    const newSender = msg.userId !== prevSenderId;
-    if (newSender && prevSenderId !== null) {
+    const plainText  = msg.text ? await decryptMsg(msg.text) : '';
+    const isMe       = msg.userId === state.userId;
+    const newSender  = msg.userId !== prevSenderId;
+    if (newSender && prevSenderId !== null)
       wrap.appendChild(Object.assign(document.createElement('div'), { className: 'msg-group-gap' }));
-    }
     div.className = `msg ${isMe ? 'me' : 'them'}`;
-    const showName = !isMe && newSender;
     div.innerHTML = `
-      ${showName ? `<div class="msg-sender">${esc(msg.sender)}</div>` : ''}
+      ${(!isMe && newSender) ? `<div class="msg-sender">${esc(msg.sender)}</div>` : ''}
       <div class="bubble">${esc(plainText)}</div>
       <div class="msg-time">${fmtTime(msg.ts)}</div>
     `;
@@ -737,47 +996,27 @@ async function renderMsg(msg) {
   wrap.appendChild(div);
 }
 
-// ── Send message ───────────────────────
 async function sendMsg() {
-  const inp = document.getElementById('msgInput');
+  const inp  = document.getElementById('msgInput');
   const text = inp.value.trim();
   if (!text || !state.roomId || !roomKey) return;
   inp.value = ''; autoGrow(inp);
   try {
-    const encryptedText = await encryptMsg(text);
+    const enc = await encryptMsg(text);
     db.ref(`rooms/${state.roomId}/messages`).push({
-      text: encryptedText, sender: state.username,
+      text: enc, sender: state.username,
       userId: state.userId, ts: Date.now(), type: 'chat'
     }).catch(() => toast('❌ Failed to send.'));
   } catch(e) { toast('❌ Encryption failed.'); }
 }
 
 function sendSystemMsg(text) {
-  db.ref(`rooms/${state.roomId}/messages`).push({ text, type: 'system', ts: Date.now() });
+  db.ref(`rooms/${state.roomId}/messages`).push({ text, type:'system', ts: Date.now() });
 }
 
-// ── Notifications ──────────────────────
-async function requestNotifPermission() {
-  if (!messaging) { toast('❌ Push not supported here.'); return; }
-  const perm = await Notification.requestPermission();
-  if (perm === 'granted') {
-    document.getElementById('notifBar').classList.remove('show');
-    toast('🔔 Notifications enabled!');
-    registerFCMToken();
-  } else { toast('🔕 Permission denied.'); }
-}
-
-async function registerFCMToken() {
-  if (!messaging || !VAPID_KEY) return;
-  try {
-    const token = await messaging.getToken({ vapidKey: VAPID_KEY });
-    if (token && state.roomId) {
-      await db.ref(`rooms/${state.roomId}/tokens/${state.userId}`).set(token);
-    }
-  } catch(e) { console.warn('FCM:', e); }
-}
-
-// ── Share / Copy ───────────────────────
+// ════════════════════════════════════════
+//  SHARE / COPY
+// ════════════════════════════════════════
 function copyCode() { copyText(state.roomId); toast('📋 Room code copied!'); }
 function copyCreatedCode() { copyText(state.roomId); toast('📋 Code copied!'); }
 async function shareRoom() {
@@ -787,39 +1026,40 @@ async function shareRoom() {
   } else { copyCode(); }
 }
 function copyText(t) {
-  if (navigator.clipboard) { navigator.clipboard.writeText(t); }
-  else { const ta = document.createElement('textarea'); ta.value=t; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
+  if (navigator.clipboard) navigator.clipboard.writeText(t);
+  else { const ta=document.createElement('textarea'); ta.value=t; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
 }
 
-// ── Helpers ────────────────────────────
+// ════════════════════════════════════════
+//  HELPERS
+// ════════════════════════════════════════
 function uid(n) {
-  return Array.from(crypto.getRandomValues(new Uint8Array(n)))
-    .map(b => b.toString(36)).join('').substring(0, n);
+  return Array.from(crypto.getRandomValues(new Uint8Array(n))).map(b=>b.toString(36)).join('').substring(0,n);
 }
 function genCode() {
-  const C = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  return Array.from({length:6}, () => C[Math.floor(Math.random()*C.length)]).join('');
+  const C='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  return Array.from({length:6},()=>C[Math.floor(Math.random()*C.length)]).join('');
 }
 function esc(s='') {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
 }
-function fmtTime(ts) { return new Date(ts).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}); }
-function scrollBottom() { const w = document.getElementById('msgWrap'); w.scrollTop = w.scrollHeight; }
-function handleKey(e) { if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); } }
+function fmtTime(ts) { return new Date(ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); }
+function scrollBottom() { const w=document.getElementById('msgWrap'); w.scrollTop=w.scrollHeight; }
+function handleKey(e) { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMsg();} }
 function autoGrow(el) { el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,130)+'px'; }
-function toast(msg, ms=3000) {
-  const el = document.getElementById('toast');
-  el.textContent = msg; el.classList.add('show');
-  setTimeout(() => el.classList.remove('show'), ms);
+function toast(msg,ms=3000) {
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),ms);
 }
-function ls(k, v) {
-  if (v===undefined) { try { return localStorage.getItem('qc_'+k); } catch(e) { return null; } }
-  if (v===null) { try { localStorage.removeItem('qc_'+k); } catch(e) {} }
-  else { try { localStorage.setItem('qc_'+k, v); } catch(e) {} }
+function ls(k,v) {
+  if(v===undefined){try{return localStorage.getItem('qc_'+k);}catch(e){return null;}}
+  if(v===null){try{localStorage.removeItem('qc_'+k);}catch(e){}}
+  else{try{localStorage.setItem('qc_'+k,v);}catch(e){}}
 }
 
-document.querySelectorAll('.modal-backdrop').forEach(el => {
-  el.addEventListener('click', e => { if (e.target===el) el.classList.remove('open'); });
+document.querySelectorAll('.modal-backdrop').forEach(el=>{
+  el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('open');});
 });
 </script>
 </body>
