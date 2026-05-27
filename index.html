@@ -396,8 +396,6 @@ const FB_CONFIG = {
   appId:"1:794097187007:web:65a7d1724006c25d53ae0a"
 };
 const VAPID_KEY = "BAdydGYDbneeDde-GkjWu-F0ZwymvIw5VIGoCru2oWWlZS1aOcs7a9Usn5DFB3rnLYTnreI-jC0tiMUg2S07UhU";
-// ⚠️ Vercel deploy ke baad apna URL yahan daalo (e.g. https://chatsapp-abc.vercel.app)
-const VERCEL_URL = window.location.origin; // auto-detect — kuch change nahi karna!
 
 // Free Google STUN servers for WebRTC
 const ICE = { iceServers:[
@@ -476,7 +474,6 @@ async function registerFCMToken(){
   try{
     const tk=await messaging.getToken({vapidKey:VAPID_KEY});
     if(!tk)return;
-    window._myFCMToken = tk; // store globally
     if(state.roomId) await db.ref(`rooms/${state.roomId}/tokens/${state.userId}`).set(tk);
     await Promise.all(getSavedRooms().map(r=>db.ref(`rooms/${r.code}/tokens/${state.userId}`).set(tk)));
   }catch(e){console.warn('FCM:',e);}
@@ -582,8 +579,6 @@ async function startCall(type){
 
   // Post call card in chat
   _postCallMsg(cs.callId, type, state.username);
-  // Notify others — browser band ho tab bhi ring kare!
-  notifyOthers({ type:'call', sender:state.username, roomId:state.roomId, callType:type, callId:cs.callId });
 
   _openCallUI(type);
   _addLocalTile();
@@ -820,21 +815,6 @@ function _postCallMsg(callId,type,senderName){
 // ══════════════════════════════════
 //  BOOT
 // ══════════════════════════════════
-// Handle when app opened from notification tap
-if('serviceWorker' in navigator) {
-  navigator.serviceWorker.addEventListener('message', event => {
-    const msg = event.data;
-    if (!msg || msg.type !== 'NOTIF_ACTION') return;
-    const d = msg.data || {};
-    if (msg.action === 'accept' && d.callId && d.roomId) {
-      // Auto-join the call when app opens from Accept tap
-      setTimeout(() => {
-        if (state.roomId === d.roomId) joinCall(d.callId, d.callType || 'voice');
-      }, 1500);
-    }
-  });
-}
-
 window.addEventListener('load',async()=>{
   state.userId=ls('userId')||uid(20); ls('userId',state.userId);
   if('serviceWorker'in navigator){try{await navigator.serviceWorker.register('./firebase-messaging-sw.js');}catch(e){}}
@@ -1010,13 +990,8 @@ async function sendMsg(){
   const inp=document.getElementById('msgInput'),text=inp.value.trim();
   if(!text||!state.roomId||!roomKey)return;
   inp.value=''; autoGrow(inp);
-  try{
-    const enc=await encryptMsg(text);
-    await db.ref(`rooms/${state.roomId}/messages`).push({text:enc,sender:state.username,userId:state.userId,ts:Date.now(),type:'chat'});
-    // Notify others (browser closed walo ko bhi)
-    notifyOthers({ type:'message', sender:state.username, roomId:state.roomId, text });
-  }
-  catch(e){toast('❌ Failed: '+e.message);}
+  try{const enc=await encryptMsg(text);db.ref(`rooms/${state.roomId}/messages`).push({text:enc,sender:state.username,userId:state.userId,ts:Date.now(),type:'chat'}).catch(()=>toast('❌ Failed.'));}
+  catch(e){toast('❌ Encryption failed.');}
 }
 function sendSystemMsg(text){db.ref(`rooms/${state.roomId}/messages`).push({text,type:'system',ts:Date.now()});}
 
