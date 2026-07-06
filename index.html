@@ -194,6 +194,10 @@
     .msg-sender{font-size:12px;color:var(--accent);font-weight:700;margin-bottom:3px;padding-left:2px;}
     .msg-time{font-size:11px;color:var(--text2);margin-top:3px;padding:0 2px;}
     .msg-group-gap{height:8px;}
+    .date-sep{align-self:center;margin:10px 0 6px;display:flex;align-items:center;gap:8px;width:90%;}
+    .date-sep-line{flex:1;height:1px;background:rgba(255,255,255,.08);}
+    .date-sep-text{font-size:11px;color:var(--text2);font-weight:600;white-space:nowrap;padding:0 4px;}
+    .call-card-time{font-size:11px;color:var(--text2);margin-top:6px;}
 
     /* INPUT */
     .chat-input-area{background:var(--surface);display:flex;align-items:flex-end;gap:10px;padding:10px 12px;padding-bottom:calc(10px + env(safe-area-inset-bottom));border-top:1px solid rgba(255,255,255,.06);flex-shrink:0;}
@@ -711,7 +715,7 @@ async function startCall(type){
     });
   }catch(e){toast('❌ Mic/camera permission denied!');return;}
 
-  cs.type=type; cs.callId=uid(12); cs.active=true;
+  cs.type=type; cs.callId=uid(12); cs.active=true; cs.initiatorId=state.userId;
   enableBackgroundMode(); // APK: foreground service start
   requestWakeLock(); startKeepAliveAudio(); setupMediaSession();
 
@@ -921,14 +925,23 @@ function endCall(){
   document.querySelectorAll('audio[id^="paudio-"]').forEach(a=>a.remove());
   if(cs.presRef){cs.presRef.off();cs.presRef=null;}
   if(cs.sigRef){cs.sigRef.off();cs.sigRef=null;}
-  if(state.roomId&&state.userId)
+  if(state.roomId&&state.userId){
     db.ref(`rooms/${state.roomId}/activeCall/participants/${state.userId}`).remove();
+    if(cs.initiatorId===state.userId){
+      db.ref(`rooms/${state.roomId}/activeCall`).remove();
+    } else {
+      db.ref(`rooms/${state.roomId}/activeCall/participants`).once('value').then(snap=>{
+        if(!snap.exists()||snap.numChildren()===0)
+          db.ref(`rooms/${state.roomId}/activeCall`).remove();
+      });
+    }
+  }
   if(cs.timerRef){clearInterval(cs.timerRef);cs.timerRef=null;}
   document.getElementById('callOverlay').classList.remove('active');
   document.getElementById('localPip').style.display='none';
   document.getElementById('btnMute').textContent='🎤'; document.getElementById('btnMute').classList.remove('on');
   document.getElementById('btnCam').textContent='📷'; document.getElementById('btnCam').classList.remove('off');
-  cs.active=false; cs.callId=null; cs.type=null; cs.muted=false; cs.camOff=false;
+  cs.active=false; cs.callId=null; cs.type=null; cs.muted=false; cs.camOff=false; cs.initiatorId=null;
   sendSystemMsg(`${state.username} ended the call 📵`);
 }
 
@@ -940,6 +953,9 @@ function _listenIncomingCalls(){
     if(cs.active)return;
     if(d.initiatorId===state.userId)return;
     if(d.callId===cs.incomingCallId)return;
+    if(d.startedAt&&(Date.now()-d.startedAt)>120000){
+      db.ref(`rooms/${state.roomId}/activeCall`).remove(); return;
+    }
     cs.incomingCallId=d.callId; cs.incomingType=d.type; cs.incomingCaller=d.initiatorName;
     _showIncoming(d.initiatorName,d.type);
   });
@@ -1100,7 +1116,7 @@ async function enterRoom(){
   else{document.getElementById('notifBar').classList.remove('show');await registerFCMToken();}
   if(state.msgListener){state.msgListener.off();state.msgListener=null;}
   _listenIncomingCalls();
-  state.lastKey=null;
+  state.lastKey=null; lastRenderedDate=null; prevSid=null;
   try{
     const snap=await db.ref(`rooms/${state.roomId}/messages`).orderByKey().limitToLast(100).once('value');
     document.getElementById('msgWrap').innerHTML='';
@@ -1130,17 +1146,39 @@ function leaveRoom(){
 //  RENDER + SEND
 // ══════════════════════════════════
 let prevSid=null;
+let lastRenderedDate=null;
+
+function _dateLbl(ts){
+  const d=new Date(ts),now=new Date(),yd=new Date();
+  yd.setDate(now.getDate()-1);
+  if(d.toDateString()===now.toDateString())return'Today';
+  if(d.toDateString()===yd.toDateString())return'Yesterday';
+  return d.toLocaleDateString([],{day:'2-digit',month:'short',year:'numeric'});
+}
+function _maybeDateSep(wrap,ts){
+  const lbl=_dateLbl(ts);
+  if(lbl===lastRenderedDate)return;
+  lastRenderedDate=lbl;
+  const s=document.createElement('div');
+  s.className='date-sep';
+  s.innerHTML=`<div class="date-sep-line"></div><div class="date-sep-text">${lbl}</div><div class="date-sep-line"></div>`;
+  wrap.appendChild(s);
+}
+
 async function renderMsg(msg){
   const wrap=document.getElementById('msgWrap');
   const div=document.createElement('div');
   if(msg.type==='call'){
+    _maybeDateSep(wrap,msg.ts);
     div.className='msg system';
     const notMe=msg.userId!==state.userId && !cs.active;
-    div.innerHTML=`<div class="call-card"><div class="call-card-icon">${msg.callType==='video'?'📹':'📞'}</div><div class="call-card-title">${msg.callType==='video'?'Video':'Voice'} Call</div><div class="call-card-sub">${esc(msg.sender)} started a call</div>${notMe?`<button class="call-card-btn" onclick="joinCall('${msg.callId}','${msg.callType}')">Join Call 📲</button>`:''}</div>`;
+    div.innerHTML=`<div class="call-card"><div class="call-card-icon">${msg.callType==='video'?'📹':'📞'}</div><div class="call-card-title">${msg.callType==='video'?'Video':'Voice'} Call</div><div class="call-card-sub">${esc(msg.sender)} started a call</div>${notMe?`<button class="call-card-btn" onclick="joinCall('${msg.callId}','${msg.callType}')">Join Call 📲</button>`:''}<div class="call-card-time">${fmtTime(msg.ts)}</div></div>`;
     prevSid=null;
   } else if(msg.type==='system'){
+    _maybeDateSep(wrap,msg.ts);
     div.className='msg system'; div.innerHTML=`<div class="bubble">${esc(msg.text)}</div>`; prevSid=null;
   } else {
+    _maybeDateSep(wrap,msg.ts);
     const pt=msg.text?await decryptMsg(msg.text):'';
     const isMe=msg.userId===state.userId, ns=msg.userId!==prevSid;
     if(ns&&prevSid!==null) wrap.appendChild(Object.assign(document.createElement('div'),{className:'msg-group-gap'}));
