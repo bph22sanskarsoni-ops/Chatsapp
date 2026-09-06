@@ -194,6 +194,9 @@
     .call-card-sub{font-size:12px;color:var(--text2);margin-top:3px;}
     .call-card-btn{background:var(--accent);color:#000;border:none;border-radius:20px;padding:8px 22px;font-size:13px;font-weight:700;cursor:pointer;margin-top:10px;display:inline-block;}
     .msg-sender{font-size:12px;color:var(--accent);font-weight:700;margin-bottom:3px;padding-left:2px;}
+    .msg-sender.is-admin{color:var(--red) !important;font-weight:900;letter-spacing:.3px;}
+    .admin-home-badge{display:inline-block;background:rgba(255,95,95,.12);border:1px solid rgba(255,95,95,.3);border-radius:20px;padding:3px 10px;font-size:11px;color:var(--red);font-weight:800;letter-spacing:.5px;margin-top:6px;}
+    .wt-admin-tag{background:var(--red);color:#fff;font-size:10px;font-weight:800;border-radius:4px;padding:1px 5px;margin-right:4px;vertical-align:middle;}
     .msg-time{font-size:11px;color:var(--text2);margin-top:3px;padding:0 2px;}
     .msg-group-gap{height:8px;}
     .date-sep{align-self:center;margin:10px 0 6px;display:flex;align-items:center;gap:8px;width:90%;}
@@ -540,6 +543,8 @@ const FB_CONFIG = {
   appId:"1:794097187007:web:65a7d1724006c25d53ae0a"
 };
 const VAPID_KEY = "BAdydGYDbneeDde-GkjWu-F0ZwymvIw5VIGoCru2oWWlZS1aOcs7a9Usn5DFB3rnLYTnreI-jC0tiMUg2S07UhU";
+// ⚠️ Ye apna secret admin PIN set karo — kisi ko mat batana!
+const ADMIN_PIN = 'KHUSH2025'; // Change this!
 
 // Free Google STUN servers for WebRTC
 const ICE = { iceServers:[
@@ -598,6 +603,7 @@ let bgListeners={}, unreadCounts={}, ianQueue=[], ianShowing=false, ianTimer=nul
 // ── Walkie-Talkie State ──
 let appMode = 'chat'; // 'chat' | 'walkie'
 let wtUser  = null;   // logged-in Firebase user
+let isAdmin = ls('isAdmin') === '1'; // persists across sessions
 let wt = {
   active:false, stream:null, peers:{}, muted:false,
   presRef:null, sigRef:null, talkRef:null,
@@ -1325,7 +1331,8 @@ window.addEventListener('load',async()=>{
   renderSavedRooms(); showScreen('homeScreen');
   if(Notification.permission==='granted') setTimeout(startAllBgListeners,1500);
   setupLogoSwipe();
-  auth.onAuthStateChanged(user=>{ wtUser=user; });
+  _updateAdminUI();
+  auth.onAuthStateChanged(user=>{ wtUser=user; if(user) toast('WT: Logged in as '+user.email); });
 });
 
 // ══════════════════════════════════
@@ -1507,7 +1514,8 @@ async function renderMsg(msg){
     const isMe=msg.userId===state.userId, ns=msg.userId!==prevSid;
     if(ns&&prevSid!==null) wrap.appendChild(Object.assign(document.createElement('div'),{className:'msg-group-gap'}));
     div.className=`msg ${isMe?'me':'them'}`;
-    div.innerHTML=`${(!isMe&&ns)?`<div class="msg-sender">${esc(msg.sender)}</div>`:''}<div class="bubble">${esc(pt)}</div><div class="msg-time">${fmtTime(msg.ts)}</div>`;
+    const isAdminMsg = msg.isAdmin || (msg.sender && msg.sender.startsWith('[Admin]'));
+    div.innerHTML=`${(!isMe&&ns)?`<div class="msg-sender${isAdminMsg?' is-admin':''}">${esc(msg.sender)}</div>`:''}<div class="bubble">${esc(pt)}</div><div class="msg-time">${fmtTime(msg.ts)}</div>`;
     prevSid=msg.userId;
   }
   wrap.appendChild(div);
@@ -1518,7 +1526,8 @@ async function sendMsg(){
   inp.value=''; autoGrow(inp);
   try{
     const enc=await encryptMsg(text);
-    await db.ref(`rooms/${state.roomId}/messages`).push({text:enc,sender:state.username,userId:state.userId,ts:Date.now(),type:'chat'});
+    const senderName = isAdmin ? '[Admin] ' + state.username : state.username;
+    await db.ref(`rooms/${state.roomId}/messages`).push({text:enc,sender:senderName,isAdmin:isAdmin,userId:state.userId,ts:Date.now(),type:'chat'});
   }
   catch(e){toast('❌ Failed: '+e.message);}
 }
@@ -1536,6 +1545,52 @@ function copyText(t){if(navigator.clipboard)navigator.clipboard.writeText(t);els
 //  🎙️ WALKIE-TALKIE MODE
 // ══════════════════════════════════
 
+// ── Admin Functions ──
+function _updateAdminUI() {
+  const sub = document.getElementById('homeSubtitle');
+  if (!sub) return;
+  if (appMode === 'chat') {
+    sub.innerHTML = isAdmin
+      ? 'Made by Khush &nbsp;<span style="color:var(--red);font-weight:900;font-size:12px;">● ADMIN MODE</span>'
+      : 'Made by Khush';
+  } else {
+    sub.innerHTML = isAdmin
+      ? 'Push to Talk &nbsp;<span style="color:var(--red);font-weight:900;font-size:12px;">● ADMIN</span>'
+      : 'Push to Talk';
+  }
+}
+
+function _activateAdminMode() {
+  const pin = prompt('Enter Admin PIN:');
+  if (pin === null) return; // cancelled
+  if (pin === ADMIN_PIN) {
+    isAdmin = true; ls('isAdmin', '1');
+    toast('✅ Admin mode ON!');
+    _updateAdminUI();
+  } else {
+    toast('❌ Wrong PIN');
+  }
+}
+
+function _deactivateAdminMode() {
+  isAdmin = false; ls('isAdmin', null);
+  toast('Admin mode deactivated');
+  _updateAdminUI();
+}
+
+// ── Logo Tap counter (5 rapid taps = admin toggle) ──
+let _tapCount = 0, _tapTimer = null;
+function _handleLogoTap() {
+  _tapCount++;
+  if (_tapTimer) clearTimeout(_tapTimer);
+  _tapTimer = setTimeout(() => { _tapCount = 0; }, 1500);
+  if (_tapCount >= 5) {
+    _tapCount = 0;
+    if (isAdmin) _deactivateAdminMode();
+    else _activateAdminMode();
+  }
+}
+
 function setupLogoSwipe() {
   const logo = document.getElementById('logoRing');
   if (!logo) return;
@@ -1544,6 +1599,7 @@ function setupLogoSwipe() {
   logo.addEventListener('touchend', e => {
     const dx = e.changedTouches[0].clientX - sx;
     if (Math.abs(dx) > 35) _switchMode(dx < 0 ? 'walkie' : 'chat');
+    else _handleLogoTap(); // tap (no swipe) = count for admin
   }, {passive:true});
   let msx = 0, mdwn = false;
   logo.addEventListener('mousedown', e => { msx = e.clientX; mdwn = true; });
@@ -1564,10 +1620,11 @@ function _switchMode(mode) {
   document.getElementById('logoRing').textContent     = isWT ? '📻' : '💬';
   document.getElementById('dotChat').classList.toggle('active', !isWT);
   document.getElementById('dotWalkie').classList.toggle('active',  isWT);
-  if (isWT && !wtUser) {
+  if (isWT && !wtUser && !isAdmin) {
     openModal('wtLoginModal');
     setTimeout(()=>document.getElementById('wtEmail').focus(), 300);
   }
+  _updateAdminUI();
 }
 
 async function doWTLogin() {
@@ -1615,6 +1672,11 @@ async function enterWTRoom() {
   } catch(e) { toast('❌ Mic permission denied!'); leaveWTRoom(); return; }
 
   wt.active = true; wt.muted = true; wt.peers = {};
+  // Show admin badge in WT header if admin
+  const wtNm = document.getElementById('wtRoomName');
+  if (isAdmin) {
+    wtNm.innerHTML = `<span class="wt-admin-tag">ADMIN</span>${getRoomDisplayName(state.roomId)}`;
+  }
 
   const presNode = db.ref(`rooms/${state.roomId}/wtPresence/${state.userId}`);
   presNode.set({ name: state.username, at: Date.now() });
@@ -1775,7 +1837,10 @@ function ls(k,v){
   if(v===null){try{localStorage.removeItem('qc_'+k);}catch(e){}}
   else{try{localStorage.setItem('qc_'+k,v);}catch(e){}}
 }
-document.querySelectorAll('.modal-backdrop').forEach(el=>el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('open');}));
+document.querySelectorAll('.modal-backdrop').forEach(el=>{
+  if(el.id==='wtLoginModal') return; // WT login modal can't be dismissed by tapping outside
+  el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('open');});
+});
 </script>
 </body>
 </html>
