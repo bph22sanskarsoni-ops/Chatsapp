@@ -225,11 +225,7 @@
     .empty-chat{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:.4;}
 
     /* ── WALKIE-TALKIE MODE ── */
-    .mode-dots{display:flex;gap:7px;justify-content:center;margin-top:10px;}
-    .mode-dot{width:8px;height:8px;border-radius:50%;background:var(--surface2);transition:all .3s;}
-    .mode-dot.active{background:var(--accent);transform:scale(1.2);}
-    .swipe-hint{display:flex;align-items:center;gap:6px;color:var(--text2);font-size:11px;margin-top:8px;opacity:.6;}
-    .swipe-arrow{font-size:14px;}
+
     /* WT login modal */
     .wt-login-badge{background:rgba(0,200,150,.1);border:1px solid rgba(0,200,150,.2);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--text2);text-align:center;margin-bottom:16px;}
     /* WT Room Screen */
@@ -310,13 +306,8 @@
     <div style="position:relative;display:inline-block;margin-bottom:4px;">
       <div class="logo-ring" id="logoRing" style="cursor:pointer;margin-bottom:0;">💬</div>
     </div>
-    <div class="swipe-hint"><span class="swipe-arrow">‹</span>swipe to switch mode<span class="swipe-arrow">›</span></div>
     <div class="home-title" id="homeTitle">Chatsapp</div>
     <div class="home-subtitle" id="homeSubtitle">Made by Khush</div>
-    <div class="mode-dots">
-      <div class="mode-dot active" id="dotChat"></div>
-      <div class="mode-dot" id="dotWalkie"></div>
-    </div>
   </div>
   <div class="home-actions">
     <div class="action-card primary" onclick="openCreateModal()">
@@ -544,7 +535,7 @@ const FB_CONFIG = {
 };
 const VAPID_KEY = "BAdydGYDbneeDde-GkjWu-F0ZwymvIw5VIGoCru2oWWlZS1aOcs7a9Usn5DFB3rnLYTnreI-jC0tiMUg2S07UhU";
 // ⚠️ Ye apna secret admin PIN set karo — kisi ko mat batana!
-const ADMIN_PIN = 'Khush'; // Change this!
+const ADMIN_PIN = 'KHUSH2025'; // Change this!
 
 // Free Google STUN servers for WebRTC
 const ICE = { iceServers:[
@@ -1583,7 +1574,7 @@ let _tapCount = 0, _tapTimer = null;
 function _handleLogoTap() {
   _tapCount++;
   if (_tapTimer) clearTimeout(_tapTimer);
-  _tapTimer = setTimeout(() => { _tapCount = 0; }, 1500);
+  _tapTimer = setTimeout(() => { _tapCount = 0; }, 800);
   if (_tapCount >= 5) {
     _tapCount = 0;
     if (isAdmin) _deactivateAdminMode();
@@ -1594,20 +1585,15 @@ function _handleLogoTap() {
 function setupLogoSwipe() {
   const logo = document.getElementById('logoRing');
   if (!logo) return;
-  let sx = 0;
-  logo.addEventListener('touchstart', e => { sx = e.touches[0].clientX; }, {passive:true});
+  // Tap = instant mode switch, no delay, no swipe needed
   logo.addEventListener('touchend', e => {
-    const dx = e.changedTouches[0].clientX - sx;
-    if (Math.abs(dx) > 35) _switchMode(dx < 0 ? 'walkie' : 'chat');
-    else _handleLogoTap(); // tap (no swipe) = count for admin
-  }, {passive:true});
-  let msx = 0, mdwn = false;
-  logo.addEventListener('mousedown', e => { msx = e.clientX; mdwn = true; });
-  logo.addEventListener('mouseup', e => {
-    if (!mdwn) return; mdwn = false;
-    const dx = e.clientX - msx;
-    if (Math.abs(dx) > 35) _switchMode(dx < 0 ? 'walkie' : 'chat');
-    else if (Math.abs(dx) < 8) _switchMode(appMode === 'chat' ? 'walkie' : 'chat');
+    e.preventDefault();
+    _handleLogoTap();
+    _switchMode(appMode === 'chat' ? 'walkie' : 'chat');
+  }, {passive:false});
+  logo.addEventListener('click', () => {
+    _handleLogoTap();
+    _switchMode(appMode === 'chat' ? 'walkie' : 'chat');
   });
 }
 
@@ -1618,8 +1604,7 @@ function _switchMode(mode) {
   document.getElementById('homeTitle').textContent    = isWT ? 'Walkie-Talkie' : 'Chatsapp';
   document.getElementById('homeSubtitle').textContent = isWT ? 'Push to Talk' : 'Made by Khush';
   document.getElementById('logoRing').textContent     = isWT ? '📻' : '💬';
-  document.getElementById('dotChat').classList.toggle('active', !isWT);
-  document.getElementById('dotWalkie').classList.toggle('active',  isWT);
+
   if (isWT && !wtUser && !isAdmin) {
     openModal('wtLoginModal');
     setTimeout(()=>document.getElementById('wtEmail').focus(), 300);
