@@ -304,7 +304,7 @@
 <div id="homeScreen" class="screen">
   <div class="home-hero">
     <div style="position:relative;display:inline-block;margin-bottom:4px;">
-      <div class="logo-ring" id="logoRing" style="cursor:pointer;margin-bottom:0;">💬</div>
+      <div class="logo-ring" id="logoRing" style="cursor:pointer;margin-bottom:0;touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;">💬</div>
     </div>
     <div class="home-title" id="homeTitle">Chatsapp</div>
     <div class="home-subtitle" id="homeSubtitle">Made by Khush</div>
@@ -535,7 +535,7 @@ const FB_CONFIG = {
 };
 const VAPID_KEY = "BAdydGYDbneeDde-GkjWu-F0ZwymvIw5VIGoCru2oWWlZS1aOcs7a9Usn5DFB3rnLYTnreI-jC0tiMUg2S07UhU";
 // ⚠️ Ye apna secret admin PIN set karo — kisi ko mat batana!
-const ADMIN_PIN = 'Khush'; // Change this!
+const ADMIN_PIN = 'KHUSH2025'; // Change this!
 
 // Free Google STUN servers for WebRTC
 const ICE = { iceServers:[
@@ -1339,13 +1339,16 @@ function closeModal(id){document.getElementById(id).classList.remove('open');}
 function getSavedRooms(){try{return JSON.parse(localStorage.getItem('qc_savedRooms')||'[]');}catch(e){return[];}}
 function setSavedRooms(r){localStorage.setItem('qc_savedRooms',JSON.stringify(r));}
 function renderSavedRooms(){
-  const rooms=getSavedRooms(),sec=document.getElementById('savedSection'),list=document.getElementById('savedList');
+  const allRooms=getSavedRooms();
+  const rooms=allRooms.filter(r=>(r.mode||'chat')===appMode);
+  const sec=document.getElementById('savedSection'),list=document.getElementById('savedList');
   if(!rooms.length){sec.style.display='none';return;}
   sec.style.display='block'; list.innerHTML='';
-  rooms.forEach((r,i)=>{
+  rooms.forEach((r)=>{
+    const i=allRooms.indexOf(r);
     const u=unreadCounts[r.code]||0;
     const card=document.createElement('div'); card.className='saved-room-card';
-    card.innerHTML=`<div class="saved-room-icon">💬</div><div class="saved-room-info"><div class="saved-room-name">${esc(r.name)}</div><div class="saved-room-code">🔒 ${r.code}</div></div>${u?`<div class="unread-badge">${u}</div>`:''}<button class="saved-room-del" onclick="deleteSavedRoom(${i},event)">🗑️</button>`;
+    card.innerHTML=`<div class="saved-room-icon">${appMode==='walkie'?'📻':'💬'}</div><div class="saved-room-info"><div class="saved-room-name">${esc(r.name)}</div><div class="saved-room-code">🔒 ${r.code}</div></div>${u?`<div class="unread-badge">${u}</div>`:''}<button class="saved-room-del" onclick="deleteSavedRoom(${i},event)">🗑️</button>`;
     card.addEventListener('click',()=>openSavedRoom(r));
     list.appendChild(card);
   });
@@ -1373,7 +1376,7 @@ function confirmSave(){
   const n=document.getElementById('saveNameInput').value.trim();
   if(!n){toast('⚠️ Naam toh daalo!');return;}
   const rooms=getSavedRooms();
-  if(!rooms.some(r=>r.code===state.roomId)){rooms.unshift({code:state.roomId,name:n,savedAt:Date.now()});setSavedRooms(rooms);if(Notification.permission==='granted')registerFCMToken();}
+  if(!rooms.some(r=>r.code===state.roomId)){rooms.unshift({code:state.roomId,name:n,savedAt:Date.now(),mode:appMode});setSavedRooms(rooms);if(Notification.permission==='granted')registerFCMToken();}
   closeModal('saveModal'); toast('✅ Room saved!');
 }
 function skipSave(){closeModal('saveModal');}
@@ -1585,16 +1588,36 @@ function _handleLogoTap() {
 function setupLogoSwipe() {
   const logo = document.getElementById('logoRing');
   if (!logo) return;
-  // Tap = instant mode switch, no delay, no swipe needed
-  logo.addEventListener('touchend', e => {
+
+  // Block browser context menu on long press (mobile)
+  logo.addEventListener('contextmenu', e => e.preventDefault());
+
+  // Use Pointer Events — works on mobile Chrome without desktop mode
+  let _pt=null, _prs=false;
+
+  const _s = e => {
     e.preventDefault();
-    _handleLogoTap();
-    _switchMode(appMode === 'chat' ? 'walkie' : 'chat');
-  }, {passive:false});
-  logo.addEventListener('click', () => {
-    _handleLogoTap();
-    _switchMode(appMode === 'chat' ? 'walkie' : 'chat');
-  });
+    _prs=true;
+    logo.style.transition='transform .15s';
+    logo.style.transform='scale(.85)';
+    _pt = setTimeout(()=>{
+      if (!_prs) return;
+      logo.style.transform='scale(1)';
+      _handleLogoTap();
+      _switchMode(appMode==='chat'?'walkie':'chat');
+    }, 800); // 800ms hold
+  };
+  const _e = e => {
+    if(e) e.preventDefault();
+    _prs=false;
+    logo.style.transform='scale(1)';
+    if(_pt){ clearTimeout(_pt); _pt=null; }
+  };
+
+  logo.addEventListener('pointerdown',  _s, {passive:false});
+  logo.addEventListener('pointerup',    _e, {passive:false});
+  logo.addEventListener('pointercancel',_e, {passive:false});
+  logo.addEventListener('pointerleave', _e, {passive:false});
 }
 
 function _switchMode(mode) {
@@ -1610,6 +1633,7 @@ function _switchMode(mode) {
     setTimeout(()=>document.getElementById('wtEmail').focus(), 300);
   }
   _updateAdminUI();
+  renderSavedRooms();
 }
 
 async function doWTLogin() {
@@ -1703,14 +1727,20 @@ async function enterWTRoom() {
       document.getElementById('wtDisplayBox').classList.remove('talking');
       document.getElementById('wtSpeakerRing').textContent  = '🔇';
       document.getElementById('wtSpeakerLabel').textContent = wt.lastSpeakerName ? 'LAST SPOKE' : 'CHANNEL QUIET';
-      document.getElementById('wtSpeakerName').textContent  = wt.lastSpeakerName || '—';
+      const _q=document.getElementById('wtSpeakerName'); _q.textContent=wt.lastSpeakerName||'—'; _q.style.color='';
     } else {
       const d = snap.val();
       wt.lastSpeakerName = d.name;
       document.getElementById('wtDisplayBox').classList.add('talking');
       document.getElementById('wtSpeakerRing').textContent  = '🔊';
       document.getElementById('wtSpeakerLabel').textContent = d.userId === state.userId ? 'YOU ARE TALKING' : 'TALKING';
-      document.getElementById('wtSpeakerName').textContent  = d.userId === state.userId ? state.username + ' (You)' : d.name;
+      const _dn = d.userId===state.userId
+        ? (isAdmin?'[Admin] '+state.username:state.username)+' (You)'
+        : d.name;
+      const _nel = document.getElementById('wtSpeakerName');
+      _nel.textContent = _dn;
+      const _isAdmSpk = d.isAdmin||(d.name&&d.name.startsWith('[Admin]'));
+      _nel.style.color = _isAdmSpk ? 'var(--red)' : 'var(--text)';
     }
   });
 
@@ -1723,6 +1753,7 @@ async function enterWTRoom() {
   });
 
   _setupPTT();
+  setTimeout(()=>offerSaveRoom(),1200);
 }
 
 function _setupPTT() {
@@ -1733,7 +1764,8 @@ function _setupPTT() {
     wt.muted = false;
     btn.classList.add('pressed');
     btn.querySelector('.wt-ptt-label').textContent = 'TALKING…';
-    db.ref(`rooms/${state.roomId}/wtTalking`).set({ userId:state.userId, name:state.username, at:Date.now() });
+    const _tn=isAdmin?'[Admin] '+state.username:state.username;
+    db.ref(`rooms/${state.roomId}/wtTalking`).set({ userId:state.userId, name:_tn, isAdmin:isAdmin, at:Date.now() });
   };
   const stopTalk = () => {
     if (!wt.active || !wt.stream) return;
