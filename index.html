@@ -1652,7 +1652,17 @@ async function enterWTRoom() {
   wt.lastSpeakerName = null;
 
   try {
-    wt.stream = await navigator.mediaDevices.getUserMedia({ audio:true, video:false });
+    wt.stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+        channelCount: 1,      // mono — half the data
+        sampleRate: 16000,    // 16kHz — enough for voice, less latency
+        latency: 0,           // request lowest possible latency
+      },
+      video: false
+    });
     wt.stream.getAudioTracks().forEach(t => t.enabled = false);
   } catch(e) { toast('❌ Mic permission denied!'); leaveWTRoom(); return; }
 
@@ -1741,6 +1751,16 @@ function _setupPTT() {
   btn.addEventListener('mouseleave',  () => { if (!wt.muted) stopTalk(); });
 }
 
+// Opus codec tuning for minimum latency (10ms ptime instead of default 20ms)
+function _wtOptimizeSDP(sdp) {
+  return sdp.replace(/a=fmtp:(\d+) (.*)/g, (match, pt, params) => {
+    if (sdp.includes(`a=rtpmap:${pt} opus`)) {
+      return `a=fmtp:${pt} minptime=10;useinbandfec=1;usedtx=1;maxaveragebitrate=32000`;
+    }
+    return match;
+  });
+}
+
 function _wtSendSig(to, obj) {
   db.ref(`rooms/${state.roomId}/wtSignals/${to}`).push({ ...obj, from:state.userId });
 }
@@ -1750,6 +1770,10 @@ async function _wtCreatePC(pid, pname, initiate) {
   wt.stream.getTracks().forEach(t => pc.addTrack(t, wt.stream));
   pc.onicecandidate = e => { if(e.candidate) _wtSendSig(pid,{type:'ice',cand:e.candidate.toJSON(),to:pid}); };
   pc.ontrack = e => {
+    // Zero jitter buffer = minimum receive latency
+    if (e.receiver && 'jitterBufferTarget' in e.receiver) {
+      e.receiver.jitterBufferTarget = 0;
+    }
     let a = document.getElementById('wtaudio-'+pid);
     if (!a) { a=document.createElement('audio'); a.id='wtaudio-'+pid; a.autoplay=true; document.body.appendChild(a); }
     a.srcObject = e.streams[0];
@@ -1763,7 +1787,7 @@ async function _wtCreatePC(pid, pname, initiate) {
   if (initiate) {
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
-    _wtSendSig(pid, {type:'offer', sdp:offer.sdp, name:state.username, to:pid});
+    _wtSendSig(pid, {type:'offer', sdp:_wtOptimizeSDP(offer.sdp), name:state.username, to:pid});
   }
 }
 async function _wtHandleOffer(pid, sdp, pname) {
@@ -1772,7 +1796,7 @@ async function _wtHandleOffer(pid, sdp, pname) {
   await pc.setRemoteDescription({type:'offer',sdp});
   const ans = await pc.createAnswer();
   await pc.setLocalDescription(ans);
-  _wtSendSig(pid, {type:'answer', sdp:ans.sdp, to:pid});
+  _wtSendSig(pid, {type:'answer', sdp:_wtOptimizeSDP(ans.sdp), to:pid});
 }
 async function _wtHandleAnswer(pid, sdp) {
   const p=wt.peers[pid]; if(!p)return;
