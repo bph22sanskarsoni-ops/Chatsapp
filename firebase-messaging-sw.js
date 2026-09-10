@@ -1,5 +1,6 @@
-// firebase-messaging-sw.js
-// Service Worker — background notifications jab browser band ho
+// ═══════════════════════════════════════════════════════
+//  firebase-messaging-sw.js — Chatsapp Service Worker
+// ═══════════════════════════════════════════════════════
 
 importScripts('https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.7.0/firebase-messaging-compat.js');
@@ -16,113 +17,61 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// ─── Background push handler ───────────────────────────────
+// ── Background FCM push ──────────────────────────────────────────────────────
 messaging.onBackgroundMessage(payload => {
-  const data  = payload.data || {};
-  const type  = data.type || 'message';
+  const data = payload.data || {};
+  const type = data.type || 'message';
 
   if (type === 'call') {
-    // CALL notification — with Accept / Decline buttons
     self.registration.showNotification(
-      `${data.callType === 'video' ? '📹' : '📞'} Incoming ${data.callType === 'video' ? 'Video' : 'Voice'} Call`,
+      `${data.callType === 'video' ? '📹' : '📞'} Incoming Call`,
       {
-        body:             `${data.sender} is calling in ${data.roomName}`,
-        icon:             '/icon-192.png',
-        badge:            '/badge-72.png',
-        tag:              'call-' + data.roomId,
-        renotify:         true,
-        requireInteraction: true,   // IMPORTANT: stays on screen until user acts
-        vibrate:          [300,100,300,100,300],
+        body: `${data.sender} is calling in ${data.roomName}`,
+        icon: '/icon-192.png', badge: '/badge-72.png',
+        tag: 'call-' + data.roomId, renotify: true, requireInteraction: true,
+        vibrate: [300, 100, 300, 100, 300],
         actions: [
           { action: 'decline', title: '📵 Decline' },
           { action: 'accept',  title: data.callType === 'video' ? '📹 Accept' : '📞 Accept' },
         ],
-        data: { type:'call', roomId: data.roomId, callId: data.callId, callType: data.callType },
+        data: { type: 'incomingCall', roomId: data.roomId, callId: data.callId, callType: data.callType },
       }
     );
   } else {
-    // MESSAGE notification
     self.registration.showNotification(
       `${data.sender} · ${data.roomName}`,
       {
-        body:     data.text || '🔒 New message',
-        icon:     '/icon-192.png',
-        badge:    '/badge-72.png',
-        tag:      'msg-' + data.roomId,
-        renotify: true,
-        vibrate:  [200, 100, 200],
-        data:     { type:'message', roomId: data.roomId },
+        body: data.text || '🔒 New message',
+        icon: '/icon-192.png', badge: '/badge-72.png',
+        tag: 'msg-' + data.roomId, renotify: true, vibrate: [200, 100, 200],
+        data: { type: 'message', roomId: data.roomId },
       }
     );
   }
 });
 
-// ─── Messages from main page ──────────────────────────────────
-// Main page sends: show/update/dismiss call notification
-self.addEventListener('message', async event => {
-  const msg = event.data;
-  if (!msg) return;
-
-  if (msg.type === 'SHOW_CALL_NOTIF') {
-    // Show or update persistent call notification
-    const actions = msg.callType === 'video'
-      ? [
-          { action: 'mic', title: msg.muted ? '🔊 Unmute' : '🔇 Mute' },
-          { action: 'cam', title: msg.camOff ? '📷 Cam On' : '🚫 Cam Off' },
-          { action: 'end', title: '📵 End' },
-        ]
-      : [
-          { action: 'mic', title: msg.muted ? '🔊 Unmute' : '🔇 Mute' },
-          { action: 'end', title: '📵 End Call' },
-        ];
-
-    await self.registration.showNotification(
-      msg.callType === 'video' ? '📹 Video Call Active' : '📞 Voice Call Active',
-      {
-        body: `${msg.roomName} · tap to open`,
-        tag: 'chatsapp-active-call',
-        requireInteraction: true,
-        silent: true,
-        icon: '/icon-192.png',
-        badge: '/badge-72.png',
-        actions,
-        data: { type: 'activeCall' },
-      }
-    );
-  }
-
-  if (msg.type === 'DISMISS_CALL_NOTIF') {
-    const notifs = await self.registration.getNotifications({ tag: 'chatsapp-active-call' });
-    notifs.forEach(n => n.close());
-  }
-});
-
-// ─── Notification tap / button click handler ───────────────
+// ── Notification click handler ───────────────────────────────────────────────
 self.addEventListener('notificationclick', event => {
-  const d = event.notification.data || {};
+  const d      = event.notification.data || {};
+  const action = event.action;
 
-  // ── Active call notification actions ──
+  // Active call notification — Mute / Cam Off / End buttons
   if (event.notification.tag === 'chatsapp-active-call') {
-    const action = event.action;
-    if (action === 'end') {
-      event.notification.close();
-      event.waitUntil(
-        clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
-          list.forEach(c => c.postMessage({ type: 'CALL_CTRL', action: 'end' }));
-        })
-      );
-      return;
-    }
-    if (action === 'mic' || action === 'cam') {
-      event.waitUntil(
-        clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
-          list.forEach(c => c.postMessage({ type: 'CALL_CTRL', action }));
-        })
-      );
-      return;
-    }
-    // Tap on body → focus app
     event.notification.close();
+
+    if (action === 'end' || action === 'mic' || action === 'cam') {
+      event.waitUntil(
+        clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+          // Send control action to main page
+          list.forEach(c => c.postMessage({ type: 'CALL_CTRL', action }));
+          // Focus app for non-end actions so notification can update
+          if (action !== 'end' && list.length) return list[0].focus();
+        })
+      );
+      return;
+    }
+
+    // Tapped notification body → focus app
     event.waitUntil(
       clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
         if (list.length) return list[0].focus();
@@ -132,70 +81,53 @@ self.addEventListener('notificationclick', event => {
     return;
   }
 
-  event.notification.close();
-  const d2 = d;
+  // Incoming call — Accept / Decline
+  if (d.type === 'incomingCall') {
+    event.notification.close();
+    if (action === 'decline') return;
 
-  if (event.action === 'decline') {
-    // User declined call — just close, do nothing
+    event.waitUntil(
+      clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+        if (list.length) {
+          list[0].postMessage({ type: 'NOTIF_ACTION', action: 'accept', data: d });
+          return list[0].focus();
+        }
+        return clients.openWindow(`/?callId=${d.callId}&callType=${d.callType||'voice'}&roomId=${d.roomId}`);
+      })
+    );
     return;
   }
 
-  // Accept call OR tapped on any notification → open/focus app
-  // Pass roomId + callId in URL so app auto-handles it
-  let url = '/';
-  if (d.type === 'call' && d.callId) {
-    url = `/?callId=${d.callId}&callType=${d.callType || 'voice'}&roomId=${d.roomId}`;
-  } else if (d.roomId) {
-    url = `/?roomId=${d.roomId}`;
-  }
-
+  // Message notification → open app
+  event.notification.close();
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
-      // If app tab already open — focus it
-      for (const c of list) {
-        if (c.url.includes(self.location.origin)) {
-          c.postMessage({ type: 'NOTIF_ACTION', action: event.action || 'open', data: d });
-          return c.focus();
-        }
-      }
-      // Else open new tab
-      return clients.openWindow(url);
+      if (list.length) return list[0].focus();
+      return clients.openWindow('/');
     })
   );
 });
 
-// ─── Fallback push event ───────────────────────────────────
+// ── Fallback push handler ────────────────────────────────────────────────────
 self.addEventListener('push', event => {
   if (!event.data) return;
-  let payload;
-  try { payload = event.data.json(); } catch(e) { return; }
+  let payload; try { payload = event.data.json(); } catch(e) { return; }
   const data = payload.data || {};
-  const type = data.type || 'message';
 
   event.waitUntil(
-    type === 'call'
-      ? self.registration.showNotification(
-          `${data.callType === 'video' ? '📹' : '📞'} Incoming Call`,
-          {
-            body: `${data.sender} is calling in ${data.roomName}`,
-            icon: '/icon-192.png', badge: '/badge-72.png',
-            tag: 'call-' + data.roomId, renotify: true, requireInteraction: true,
-            vibrate: [300,100,300,100,300],
-            actions: [
-              {action:'decline', title:'📵 Decline'},
-              {action:'accept',  title: data.callType==='video'?'📹 Accept':'📞 Accept'},
-            ],
-            data: {type:'call', roomId:data.roomId, callId:data.callId, callType:data.callType},
-          }
-        )
-      : self.registration.showNotification(
-          `${data.sender} · ${data.roomName}`,
-          {
-            body: data.text || '🔒 New message',
-            icon: '/icon-192.png', badge: '/badge-72.png',
-            tag: 'msg-' + data.roomId, renotify: true, vibrate: [200,100,200],
-            data: {type:'message', roomId: data.roomId},
-          }
-        )
+    data.type === 'call'
+      ? self.registration.showNotification(`${data.callType==='video'?'📹':'📞'} Incoming Call`, {
+          body:`${data.sender} is calling in ${data.roomName}`,
+          icon:'/icon-192.png',badge:'/badge-72.png',
+          tag:'call-'+data.roomId,renotify:true,requireInteraction:true,vibrate:[300,100,300,100,300],
+          actions:[{action:'decline',title:'📵 Decline'},{action:'accept',title:data.callType==='video'?'📹 Accept':'📞 Accept'}],
+          data:{type:'incomingCall',roomId:data.roomId,callId:data.callId,callType:data.callType},
+        })
+      : self.registration.showNotification(`${data.sender} · ${data.roomName}`, {
+          body:data.text||'🔒 New message',
+          icon:'/icon-192.png',badge:'/badge-72.png',
+          tag:'msg-'+data.roomId,renotify:true,vibrate:[200,100,200],
+          data:{type:'message',roomId:data.roomId},
+        })
   );
 });

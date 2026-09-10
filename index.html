@@ -339,6 +339,7 @@
     <div class="header-actions">
       <button class="icon-btn btn-voice" onclick="startCall('voice')" title="Voice Call">📞</button>
       <button class="icon-btn btn-video" onclick="startCall('video')" title="Video Call">📹</button>
+      <button class="icon-btn" onclick="offerSaveRoom()" title="Save Room">🔖</button>
       <button class="icon-btn" onclick="copyCode()">📋</button>
       <button class="icon-btn" onclick="shareRoom()">↗</button>
     </div>
@@ -476,6 +477,7 @@
       <div class="wt-room-nm" id="wtRoomName">Room</div>
       <div class="wt-room-code" id="wtRoomCode">🔒 ——</div>
     </div>
+    <button onclick="offerSaveRoom()" style="background:none;border:none;font-size:20px;cursor:pointer;padding:6px 8px;border-radius:8px;color:var(--text2);" title="Save Room">🔖</button>
     <div class="wt-online-badge" id="wtOnlineBadge">0 online</div>
   </div>
 
@@ -1144,22 +1146,52 @@ async function _sendSwMsg(msg) {
 
 async function showCallNotif() {
   if (Notification.permission !== 'granted') return;
-  await _sendSwMsg({
-    type: 'SHOW_CALL_NOTIF',
-    callType: cs.type,
-    roomName: getRoomDisplayName(state.roomId),
-    muted: cs.muted,
-    camOff: cs.camOff,
-  });
+  if (!('serviceWorker' in navigator)) return;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+
+    // Close old one first (so it refreshes with new mute/cam state)
+    const old = await reg.getNotifications({ tag: 'chatsapp-active-call' });
+    old.forEach(n => n.close());
+
+    const actions = cs.type === 'video'
+      ? [
+          { action: 'mic', title: cs.muted ? '🔊 Unmute' : '🔇 Mute' },
+          { action: 'cam', title: cs.camOff ? '📷 Cam On' : '🚫 Cam Off' },
+          { action: 'end', title: '📵 End' },
+        ]
+      : [
+          { action: 'mic', title: cs.muted ? '🔊 Unmute' : '🔇 Mute' },
+          { action: 'end', title: '📵 End Call' },
+        ];
+
+    await reg.showNotification(
+      cs.type === 'video' ? '📹 Video Call Active' : '📞 Voice Call Active',
+      {
+        body: getRoomDisplayName(state.roomId) + ' · tap to open',
+        tag: 'chatsapp-active-call',
+        requireInteraction: true,  // stays on screen until user acts
+        silent: true,              // no extra sound (call already rang)
+        icon: '/icon-192.png',
+        badge: '/badge-72.png',
+        actions,
+        data: { type: 'activeCall' },
+      }
+    );
+  } catch(e) { console.warn('showCallNotif:', e); }
 }
 
 async function dismissCallNotif() {
-  await _sendSwMsg({ type: 'DISMISS_CALL_NOTIF' });
+  if (!('serviceWorker' in navigator)) return;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const notifs = await reg.getNotifications({ tag: 'chatsapp-active-call' });
+    notifs.forEach(n => n.close());
+  } catch(e) {}
 }
 
 async function updateCallNotif() {
-  // Re-send with updated mute/cam state
-  await showCallNotif();
+  await showCallNotif(); // re-show with updated mute/cam state
 }
 
 // ── Listen for SW → main page CALL_CTRL messages ──
@@ -1368,8 +1400,12 @@ async function openSavedRoom(r){
 }
 async function openSavedRoomByCode(code){const r=getSavedRooms().find(x=>x.code===code);if(r)await openSavedRoom(r);}
 function offerSaveRoom(){
-  if(getSavedRooms().some(r=>r.code===state.roomId))return;
-  document.getElementById('saveNameInput').value=''; openModal('saveModal');
+  const rooms=getSavedRooms();
+  const already=rooms.find(r=>r.code===state.roomId);
+  // If saved in a different mode, allow re-saving for current mode
+  if(already && (already.mode||'chat')===appMode){ toast('💾 Room already saved!'); return; }
+  document.getElementById('saveNameInput').value = already?already.name:'';
+  openModal('saveModal');
   setTimeout(()=>document.getElementById('saveNameInput').focus(),300);
 }
 function confirmSave(){
@@ -1413,7 +1449,7 @@ async function confirmName(){
     document.getElementById('createdCodeDisplay').textContent=state.roomId; openModal('createdModal');
   } else {
     ls('roomId',state.roomId); closeModal('nameModal');
-    if(appMode==='walkie'){ await enterWTRoom(); return; }
+    if(appMode==='walkie'){ await enterWTRoom(); setTimeout(()=>offerSaveRoom(),800); return; }
     stopBgListener(state.roomId); await enterRoom();
     sendSystemMsg(`${state.username} has joined the chat 👋`);
     setTimeout(()=>offerSaveRoom(),800);
@@ -1422,7 +1458,7 @@ async function confirmName(){
 }
 async function goToChat(){
   closeModal('createdModal');
-  if(appMode==='walkie'){ await enterWTRoom(); return; }
+  if(appMode==='walkie'){ await enterWTRoom(); setTimeout(()=>offerSaveRoom(),800); return; }
   await enterRoom();
   sendSystemMsg(`${state.username} created this room 🎉`);
   setTimeout(()=>offerSaveRoom(),800);
@@ -1753,7 +1789,6 @@ async function enterWTRoom() {
   });
 
   _setupPTT();
-  setTimeout(()=>offerSaveRoom(),1200);
 }
 
 function _setupPTT() {
