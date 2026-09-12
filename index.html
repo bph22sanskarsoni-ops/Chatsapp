@@ -308,6 +308,20 @@
     .auth-submit{width:100%;background:var(--accent);color:#000;border:none;border-radius:12px;padding:15px;font-size:16px;font-weight:800;cursor:pointer;margin-top:6px;}
     .auth-submit:disabled{opacity:.5;cursor:not-allowed;}
     .msg-sender.is-owner{color:var(--red)!important;font-weight:900;}
+    /* Global Rooms */
+    .global-section{padding:4px 20px 16px;display:none;}
+    .global-label{font-size:11px;color:var(--red);font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+    .global-refresh{background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;margin-left:auto;}
+    .global-card{background:var(--surface);border:1px solid rgba(255,95,95,.15);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:background .15s;margin-bottom:7px;}
+    .global-card:active{background:var(--surface2);}
+    .global-card-icon{font-size:20px;flex-shrink:0;}
+    .global-card-info{flex:1;min-width:0;}
+    .global-card-code{font-size:13px;font-weight:800;letter-spacing:2px;color:var(--accent);}
+    .global-card-meta{font-size:12px;color:var(--text2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .global-card-type{font-size:11px;font-weight:700;border-radius:20px;padding:2px 8px;flex-shrink:0;}
+    .global-card-type.chat{background:rgba(0,200,150,.1);color:var(--accent);}
+    .global-card-type.wt{background:rgba(96,165,250,.1);color:#60a5fa;}
+    .global-empty{color:var(--text2);font-size:13px;text-align:center;padding:10px 0;}
   </style>
 </head>
 <body>
@@ -359,6 +373,14 @@
       <div class="action-arrow">›</div>
     </div>
   </div>
+  <div class="global-section" id="globalSection">
+    <div class="global-label">
+      👑 All Rooms
+      <button class="global-refresh" onclick="loadGlobalRooms()" title="Refresh">🔄</button>
+    </div>
+    <div id="globalList"></div>
+  </div>
+
   <div class="saved-section" id="savedSection" style="display:none;">
     <div class="saved-label">💾 Saved Rooms</div>
     <div class="saved-list" id="savedList"></div>
@@ -1442,6 +1464,7 @@ window.addEventListener('load', async () => {
       isOwner = (user.uid === OWNER_UID);
       if (isOwner) { isAdmin = true; ls('isAdmin', '1'); }
       _updateOwnerUI();
+      if (isOwner) loadGlobalRooms();
 
       // Resume last room if any
       const sr = ls('roomId'), su = ls('username');
@@ -1555,7 +1578,7 @@ async function confirmName(){
   state.username=name; ls('username',name);
   if(state.pendingAction==='create'){
     state.roomId=genCode();
-    try{await db.ref(`rooms/${state.roomId}`).set({createdAt:Date.now(),createdBy:state.userId});}
+    try{await db.ref(`rooms/${state.roomId}`).set({createdAt:Date.now(),createdBy:state.userId,createdByName:state.username,isWT:appMode==='walkie'});}
     catch(e){btn.textContent='Enter Room';btn.disabled=false;toast('❌ Failed.');return;}
     ls('roomId',state.roomId); closeModal('nameModal');
     document.getElementById('createdCodeDisplay').textContent=state.roomId; openModal('createdModal');
@@ -1612,7 +1635,9 @@ function leaveRoom(){
   db.ref(`rooms/${state.roomId}/activeCall`).off();
   const prev=state.roomId; ls('roomId',null); state.roomId=null; roomKey=null;
   if(prev)setTimeout(()=>startBgListener(prev),500);
-  renderSavedRooms(); showScreen('homeScreen');
+  renderSavedRooms();
+  if(isOwner) loadGlobalRooms();
+  showScreen('homeScreen');
 }
 
 // ══════════════════════════════════
@@ -2021,9 +2046,83 @@ function leaveWTRoom() {
   if (wt.sigRef) {wt.sigRef.off(); wt.sigRef=null;}
   wt.active=false; wt.lastSpeakerName=null;
   ls('roomId',null); state.roomId=null; state.username=null;
-  renderSavedRooms(); showScreen('homeScreen');
+  renderSavedRooms();
+  if(isOwner) loadGlobalRooms();
+  showScreen('homeScreen');
 }
 
+
+// ══════════════════════════════════
+//  🌐 GLOBAL ROOMS (Owner only)
+// ══════════════════════════════════
+async function loadGlobalRooms() {
+  if (!isOwner) return;
+  const sec  = document.getElementById('globalSection');
+  const list = document.getElementById('globalList');
+  sec.style.display = 'block';
+  list.innerHTML = '<div class="global-empty">Loading…</div>';
+
+  try {
+    const snap = await db.ref('rooms').orderByChild('createdAt').limitToLast(50).once('value');
+    if (!snap.exists()) {
+      list.innerHTML = '<div class="global-empty">No rooms yet</div>';
+      return;
+    }
+
+    // Collect and sort newest first
+    const rooms = [];
+    snap.forEach(child => rooms.unshift({ code: child.key, ...child.val() }));
+
+    list.innerHTML = '';
+    rooms.forEach(room => {
+      const card = document.createElement('div');
+      card.className = 'global-card';
+
+      const dt = room.createdAt
+        ? new Date(room.createdAt).toLocaleDateString([], { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })
+        : '?';
+      const creator = room.createdByName || room.createdBy || 'Unknown';
+      // Determine if WT room (check wtPresence or mark)
+      const isWTRoom = !!room.isWT;
+      const typeLabel = isWTRoom ? 'Walkie-Talkie' : 'Chat';
+      const typeClass = isWTRoom ? 'wt' : 'chat';
+      const icon      = isWTRoom ? '📻' : '💬';
+
+      card.innerHTML = `
+        <div class="global-card-icon">${icon}</div>
+        <div class="global-card-info">
+          <div class="global-card-code">${esc(room.code)}</div>
+          <div class="global-card-meta">By: ${esc(creator)} · ${dt}</div>
+        </div>
+        <div class="global-card-type ${typeClass}">${typeLabel}</div>`;
+
+      card.onclick = () => ownerJoinRoom(room.code, isWTRoom);
+      list.appendChild(card);
+    });
+  } catch(e) {
+    list.innerHTML = '<div class="global-empty" style="color:var(--red);">Error loading rooms</div>';
+  }
+}
+
+async function ownerJoinRoom(code, isWTRoom) {
+  // Owner can jump into any room directly
+  if (!state.username) {
+    // Ask name quickly
+    const name = prompt('Apna naam:');
+    if (!name) return;
+    state.username = name;
+    ls('username', name);
+  }
+  state.roomId = code;
+  ls('roomId', code);
+
+  if (isWTRoom) {
+    await enterWTRoom();
+  } else {
+    try { roomKey = await deriveRoomKey(code); } catch(e) {}
+    await enterRoom();
+  }
+}
 
 // ══════════════════════════════════
 //  HELPERS
