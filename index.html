@@ -293,9 +293,47 @@
     .wt-leave-btn{width:100%;background:rgba(255,95,95,.12);border:1px solid rgba(255,95,95,.25);color:var(--red);border-radius:12px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;}
     .empty-chat-icon{font-size:56px;margin-bottom:12px;}
     .empty-chat-text{font-size:15px;}
+
+    /* ── AUTH SCREEN ── */
+    #authScreen{align-items:stretch;justify-content:center;padding:52px 24px;overflow-y:auto;gap:0;}
+    .auth-logo{font-size:64px;text-align:center;}
+    .auth-appname{font-size:28px;font-weight:800;text-align:center;margin:6px 0 2px;}
+    .auth-tagline{color:var(--text2);font-size:13px;text-align:center;margin-bottom:26px;}
+    .auth-tabs{display:flex;background:var(--surface);border-radius:12px;padding:3px;margin-bottom:16px;}
+    .auth-tab{flex:1;padding:11px;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;background:none;color:var(--text2);transition:.2s;}
+    .auth-tab.active{background:var(--accent);color:#000;}
+    .auth-lbl{font-size:11px;color:var(--text2);font-weight:600;letter-spacing:.5px;text-transform:uppercase;display:block;margin-bottom:6px;}
+    .auth-field{margin-bottom:12px;}
+    .auth-err{color:var(--red);font-size:13px;margin:8px 0;display:none;text-align:center;}
+    .auth-submit{width:100%;background:var(--accent);color:#000;border:none;border-radius:12px;padding:15px;font-size:16px;font-weight:800;cursor:pointer;margin-top:6px;}
+    .auth-submit:disabled{opacity:.5;cursor:not-allowed;}
+    .msg-sender.is-owner{color:var(--red)!important;font-weight:900;}
   </style>
 </head>
 <body>
+
+<!-- AUTH SCREEN -->
+<div id="authScreen" class="screen">
+  <div class="auth-logo">💬</div>
+  <div class="auth-appname">Chatsapp</div>
+  <div class="auth-tagline">Made by Khush</div>
+  <div class="auth-tabs">
+    <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Login</button>
+    <button class="auth-tab"        id="tabReg"   onclick="switchAuthTab('register')">Register</button>
+  </div>
+  <div class="auth-field">
+    <span class="auth-lbl">Email</span>
+    <input class="text-input" id="authEmail" type="email" placeholder="your@email.com"
+      onkeydown="if(event.key==='Enter')document.getElementById('authPass').focus()">
+  </div>
+  <div class="auth-field" style="margin-top:10px;">
+    <span class="auth-lbl">Password</span>
+    <input class="text-input" id="authPass" type="password" placeholder="Password"
+      onkeydown="if(event.key==='Enter')doAuth()">
+  </div>
+  <div class="auth-err" id="authErr"></div>
+  <button class="auth-submit" id="authSubmitBtn" onclick="doAuth()" style="margin-top:14px;">Login</button>
+</div>
 
 <!-- LOADING -->
 <div id="loadingScreen" class="screen active"><div class="spinner"></div></div>
@@ -536,8 +574,10 @@ const FB_CONFIG = {
   appId:"1:794097187007:web:65a7d1724006c25d53ae0a"
 };
 const VAPID_KEY = "BAdydGYDbneeDde-GkjWu-F0ZwymvIw5VIGoCru2oWWlZS1aOcs7a9Usn5DFB3rnLYTnreI-jC0tiMUg2S07UhU";
+// ⚠️ Firebase Console → Authentication → Users → apna UID copy karke yahan daalo
+const OWNER_UID = "7hwqk0CPBHc70r3DJv8VsUQGESr2";
 // ⚠️ Ye apna secret admin PIN set karo — kisi ko mat batana!
-const ADMIN_PIN = 'Khush'; // Change this!
+const ADMIN_PIN = 'KHUSH2025'; // Change this!
 
 // Free Google STUN servers for WebRTC
 const ICE = { iceServers:[
@@ -596,7 +636,9 @@ let bgListeners={}, unreadCounts={}, ianQueue=[], ianShowing=false, ianTimer=nul
 // ── Walkie-Talkie State ──
 let appMode = 'chat'; // 'chat' | 'walkie'
 let wtUser  = null;   // logged-in Firebase user
-let isAdmin = ls('isAdmin') === '1'; // persists across sessions
+let isAdmin  = ls('isAdmin') === '1'; // persists across sessions
+let isOwner  = false;  // auto-set when OWNER_UID logs in
+let _authUser = null;  // current Firebase Auth user
 let wt = {
   active:false, stream:null, peers:{}, muted:false,
   presRef:null, sigRef:null, talkRef:null,
@@ -1343,20 +1385,90 @@ if('serviceWorker' in navigator) {
   });
 }
 
-window.addEventListener('load',async()=>{
-  state.userId=ls('userId')||uid(20); ls('userId',state.userId);
-  if('serviceWorker'in navigator){try{await navigator.serviceWorker.register('./firebase-messaging-sw.js');}catch(e){}}
-  const sr=ls('roomId'), su=ls('username');
-  if(sr&&su){
-    try{const snap=await db.ref(`rooms/${sr}`).once('value');if(snap.exists()){state.roomId=sr;state.username=su;await enterRoom();return;}}catch(e){}
-    ls('roomId',null);
+// ── Auth functions ──────────────────────────────────────
+let _authTab = 'login';
+function switchAuthTab(tab) {
+  _authTab = tab;
+  document.getElementById('tabLogin').classList.toggle('active', tab==='login');
+  document.getElementById('tabReg').classList.toggle('active',   tab==='register');
+  document.getElementById('authSubmitBtn').textContent = tab==='login' ? 'Login' : 'Register';
+}
+async function doAuth() {
+  const email = document.getElementById('authEmail').value.trim();
+  const pass  = document.getElementById('authPass').value;
+  const errEl = document.getElementById('authErr');
+  errEl.style.display = 'none';
+  if (!email||!pass) { errEl.textContent='⚠️ Email aur password daalo'; errEl.style.display='block'; return; }
+  const btn = document.getElementById('authSubmitBtn');
+  btn.textContent = _authTab==='login' ? 'Logging in…' : 'Registering…';
+  btn.disabled = true;
+  try {
+    if (_authTab==='login') await auth.signInWithEmailAndPassword(email, pass);
+    else                    await auth.createUserWithEmailAndPassword(email, pass);
+    // onAuthStateChanged fires and boots the app
+  } catch(e) {
+    errEl.textContent = '❌ ' + (e.message||'Try again.');
+    errEl.style.display = 'block';
   }
-  renderSavedRooms(); showScreen('homeScreen');
-  if(Notification.permission==='granted') setTimeout(startAllBgListeners,1500);
+  btn.textContent = _authTab==='login' ? 'Login' : 'Register';
+  btn.disabled = false;
+}
+
+// WT whitelist check — only allowed UIDs can use WT
+async function canUseWT() {
+  if (isOwner || isAdmin) return true;
+  if (!_authUser) return false;
+  try {
+    const snap = await db.ref('wtAllowed/' + _authUser.uid).once('value');
+    return snap.exists();
+  } catch(e) { return false; }
+}
+
+window.addEventListener('load', async () => {
+  state.userId = ls('userId') || uid(20); ls('userId', state.userId);
+  if ('serviceWorker' in navigator) {
+    try { await navigator.serviceWorker.register('./firebase-messaging-sw.js'); } catch(e) {}
+  }
   setupLogoSwipe();
   _updateAdminUI();
-  auth.onAuthStateChanged(user=>{ wtUser=user; if(user) toast('WT: Logged in as '+user.email); });
+
+  // Firebase Auth — handles everything
+  auth.onAuthStateChanged(async user => {
+    _authUser = user;
+    wtUser    = user;
+
+    if (user) {
+      // Check if owner
+      isOwner = (user.uid === OWNER_UID);
+      if (isOwner) { isAdmin = true; ls('isAdmin', '1'); }
+      _updateOwnerUI();
+
+      // Resume last room if any
+      const sr = ls('roomId'), su = ls('username');
+      if (sr && su) {
+        try {
+          const snap = await db.ref(`rooms/${sr}`).once('value');
+          if (snap.exists()) {
+            state.roomId = sr; state.username = su;
+            await enterRoom(); return;
+          }
+        } catch(e) {}
+        ls('roomId', null);
+      }
+
+      renderSavedRooms(); showScreen('homeScreen');
+      if (Notification.permission === 'granted') setTimeout(startAllBgListeners, 1500);
+    } else {
+      // Not logged in → show auth screen
+      isOwner = false;
+      showScreen('authScreen');
+    }
+  });
 });
+
+function _updateOwnerUI() {
+  _updateAdminUI(); // re-uses existing function for subtitle badge
+}
 
 // ══════════════════════════════════
 //  SCREEN HELPERS
@@ -1544,8 +1656,10 @@ async function renderMsg(msg){
     const isMe=msg.userId===state.userId, ns=msg.userId!==prevSid;
     if(ns&&prevSid!==null) wrap.appendChild(Object.assign(document.createElement('div'),{className:'msg-group-gap'}));
     div.className=`msg ${isMe?'me':'them'}`;
-    const isAdminMsg = msg.isAdmin || (msg.sender && msg.sender.startsWith('[Admin]'));
-    div.innerHTML=`${(!isMe&&ns)?`<div class="msg-sender${isAdminMsg?' is-admin':''}">${esc(msg.sender)}</div>`:''}<div class="bubble">${esc(pt)}</div><div class="msg-time">${fmtTime(msg.ts)}</div>`;
+    const isOwnerMsg = msg.isOwner || (msg.sender && msg.sender.startsWith('[Owner]'));
+    const isAdminMsg = !isOwnerMsg && (msg.isAdmin || (msg.sender && msg.sender.startsWith('[Admin]')));
+    const sClass = isOwnerMsg ? 'msg-sender is-owner' : (isAdminMsg ? 'msg-sender is-admin' : 'msg-sender');
+    div.innerHTML=`${(!isMe&&ns)?`<div class="${sClass}">${esc(msg.sender)}</div>`:''}<div class="bubble">${esc(pt)}</div><div class="msg-time">${fmtTime(msg.ts)}</div>`;
     prevSid=msg.userId;
   }
   wrap.appendChild(div);
@@ -1556,8 +1670,12 @@ async function sendMsg(){
   inp.value=''; autoGrow(inp);
   try{
     const enc=await encryptMsg(text);
-    const senderName = isAdmin ? '[Admin] ' + state.username : state.username;
-    await db.ref(`rooms/${state.roomId}/messages`).push({text:enc,sender:senderName,isAdmin:isAdmin,userId:state.userId,ts:Date.now(),type:'chat'});
+    const senderName = isOwner ? '[Owner] ' + state.username
+                      : (isAdmin ? '[Admin] ' + state.username : state.username);
+    await db.ref(`rooms/${state.roomId}/messages`).push({
+      text:enc, sender:senderName, isAdmin:isAdmin, isOwner:isOwner,
+      userId:state.userId, ts:Date.now(), type:'chat'
+    });
   }
   catch(e){toast('❌ Failed: '+e.message);}
 }
@@ -1580,13 +1698,17 @@ function _updateAdminUI() {
   const sub = document.getElementById('homeSubtitle');
   if (!sub) return;
   if (appMode === 'chat') {
-    sub.innerHTML = isAdmin
-      ? 'Made by Khush &nbsp;<span style="color:var(--red);font-weight:900;font-size:12px;">● ADMIN MODE</span>'
-      : 'Made by Khush';
+    sub.innerHTML = isOwner
+      ? 'Made by Khush &nbsp;<span style="color:var(--red);font-weight:900;font-size:12px;">● OWNER</span>'
+      : (isAdmin
+        ? 'Made by Khush &nbsp;<span style="color:#f59e0b;font-weight:900;font-size:12px;">● ADMIN</span>'
+        : 'Made by Khush');
   } else {
-    sub.innerHTML = isAdmin
-      ? 'Push to Talk &nbsp;<span style="color:var(--red);font-weight:900;font-size:12px;">● ADMIN</span>'
-      : 'Push to Talk';
+    sub.innerHTML = isOwner
+      ? 'Push to Talk &nbsp;<span style="color:var(--red);font-weight:900;font-size:12px;">● OWNER</span>'
+      : (isAdmin
+        ? 'Push to Talk &nbsp;<span style="color:#f59e0b;font-weight:900;font-size:12px;">● ADMIN</span>'
+        : 'Push to Talk');
   }
 }
 
@@ -1664,9 +1786,14 @@ function _switchMode(mode) {
   document.getElementById('homeSubtitle').textContent = isWT ? 'Push to Talk' : 'Made by Khush';
   document.getElementById('logoRing').textContent     = isWT ? '📻' : '💬';
 
-  if (isWT && !wtUser && !isAdmin) {
-    openModal('wtLoginModal');
-    setTimeout(()=>document.getElementById('wtEmail').focus(), 300);
+  if (isWT) {
+    canUseWT().then(ok => {
+      if (!ok) {
+        // Not authorized for WT
+        toast('❌ WT access nahi hai. Owner se request karo.');
+        _switchMode('chat');
+      }
+    });
   }
   _updateAdminUI();
   renderSavedRooms();
@@ -1775,8 +1902,9 @@ async function enterWTRoom() {
         : d.name;
       const _nel = document.getElementById('wtSpeakerName');
       _nel.textContent = _dn;
-      const _isAdmSpk = d.isAdmin||(d.name&&d.name.startsWith('[Admin]'));
-      _nel.style.color = _isAdmSpk ? 'var(--red)' : 'var(--text)';
+      const _isOwnSpk = d.isOwner||(d.name&&d.name.startsWith('[Owner]'));
+      const _isAdmSpk = !_isOwnSpk&&(d.isAdmin||(d.name&&d.name.startsWith('[Admin]')));
+      _nel.style.color = _isOwnSpk ? 'var(--red)' : (_isAdmSpk ? '#f59e0b' : 'var(--text)');
     }
   });
 
