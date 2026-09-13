@@ -1530,8 +1530,19 @@ async function openSavedRoom(r){
   unreadCounts[r.code]=0; renderSavedRooms();
   state.roomId=r.code;
   const su=ls('username');
-  if(su){state.username=su;ls('roomId',r.code);stopBgListener(r.code);await enterRoom();}
-  else{state.pendingAction='join';document.getElementById('nameModalTitle').textContent='👤 Enter Your Name';document.getElementById('nameInput').value='';document.getElementById('nameError').style.display='none';openModal('nameModal');}
+  if(su){
+    state.username=su; ls('roomId',r.code); stopBgListener(r.code);
+    // Open in the correct mode (chat or walkie-talkie based on how it was saved)
+    const savedMode = r.mode || 'chat';
+    if(savedMode==='walkie') await enterWTRoom();
+    else await enterRoom();
+  } else {
+    state.pendingAction='join';
+    document.getElementById('nameModalTitle').textContent='👤 Enter Your Name';
+    document.getElementById('nameInput').value='';
+    document.getElementById('nameError').style.display='none';
+    openModal('nameModal');
+  }
 }
 async function openSavedRoomByCode(code){const r=getSavedRooms().find(x=>x.code===code);if(r)await openSavedRoom(r);}
 function offerSaveRoom(){
