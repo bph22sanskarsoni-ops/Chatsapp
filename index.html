@@ -198,6 +198,9 @@
     .admin-home-badge{display:inline-block;background:rgba(255,95,95,.12);border:1px solid rgba(255,95,95,.3);border-radius:20px;padding:3px 10px;font-size:11px;color:var(--red);font-weight:800;letter-spacing:.5px;margin-top:6px;}
     .wt-admin-tag{background:var(--red);color:#fff;font-size:10px;font-weight:800;border-radius:4px;padding:1px 5px;margin-right:4px;vertical-align:middle;}
     .msg-time{font-size:11px;color:var(--text2);margin-top:3px;padding:0 2px;}
+    .msg-meta{display:flex;align-items:center;gap:3px;margin-top:3px;padding:0 2px;}
+    .msg-tick{font-size:13px;color:var(--text2);line-height:1;letter-spacing:-2px;}
+    .msg-tick.seen{color:#53bdeb;}
     .msg-group-gap{height:8px;}
     .date-sep{align-self:center;margin:10px 0 6px;display:flex;align-items:center;gap:8px;width:90%;}
     .date-sep-line{flex:1;height:1px;background:rgba(255,255,255,.08);}
@@ -322,6 +325,9 @@
     .global-card-type.chat{background:rgba(0,200,150,.1);color:var(--accent);}
     .global-card-type.wt{background:rgba(96,165,250,.1);color:#60a5fa;}
     .global-empty{color:var(--text2);font-size:13px;text-align:center;padding:10px 0;}
+    /* Pull to refresh */
+    .ptr-indicator{position:fixed;top:0;left:50%;transform:translateX(-50%) translateY(-60px);background:var(--surface);border-radius:0 0 20px 20px;padding:8px 20px;font-size:13px;color:var(--accent);font-weight:700;z-index:9000;transition:transform .25s;box-shadow:0 4px 16px rgba(0,0,0,.3);}
+    .ptr-indicator.show{transform:translateX(-50%) translateY(0);}
   </style>
 </head>
 <body>
@@ -573,6 +579,7 @@
   <button class="ian-close" onclick="hideInAppNotif()">✕</button>
 </div>
 <div id="toast"></div>
+<div class="ptr-indicator" id="ptrIndicator">↓ Release to refresh</div>
 <audio id="keepAliveAudio" src="./silence.wav" loop preload="auto" playsinline style="display:none;"></audio>
 
 <!-- Capacitor runtime (only active inside APK, harmless on website) -->
@@ -1623,6 +1630,7 @@ async function enterRoom(){
   else{document.getElementById('notifBar').classList.remove('show');await registerFCMToken();}
   if(state.msgListener){state.msgListener.off();state.msgListener=null;}
   _listenIncomingCalls();
+  startReadTracking();
   state.lastKey=null; lastRenderedDate=null; prevSid=null;
   try{
     const snap=await db.ref(`rooms/${state.roomId}/messages`).orderByKey().limitToLast(100).once('value');
@@ -1641,6 +1649,7 @@ async function enterRoom(){
 }
 function getRoomDisplayName(code){const s=getSavedRooms().find(r=>r.code===code);return s?s.name:`Room · ${code}`;}
 function leaveRoom(){
+  stopReadTracking();
   if(cs.active)endCall();
   if(state.msgListener){state.msgListener.off();state.msgListener=null;}
   db.ref(`rooms/${state.roomId}/activeCall`).off();
@@ -1695,7 +1704,14 @@ async function renderMsg(msg){
     const isOwnerMsg = msg.isOwner || (msg.sender && msg.sender.startsWith('[Owner]'));
     const isAdminMsg = !isOwnerMsg && (msg.isAdmin || (msg.sender && msg.sender.startsWith('[Admin]')));
     const sClass = isOwnerMsg ? 'msg-sender is-owner' : (isAdminMsg ? 'msg-sender is-admin' : 'msg-sender');
-    div.innerHTML=`${(!isMe&&ns)?`<div class="${sClass}">${esc(msg.sender)}</div>`:''}<div class="bubble">${esc(pt)}</div><div class="msg-time">${fmtTime(msg.ts)}</div>`;
+    // Ticks: only for own messages
+    const tickHtml = isMe
+      ? `<div class="msg-meta">
+           <span class="msg-time" style="margin-top:0;">${fmtTime(msg.ts)}</span>
+           <span class="msg-tick" id="tick-${msg._key||msg.ts}">${_getTick(msg.ts)}</span>
+         </div>`
+      : `<div class="msg-time">${fmtTime(msg.ts)}</div>`;
+    div.innerHTML=`${(!isMe&&ns)?`<div class="${sClass}">${esc(msg.sender)}</div>`:''}<div class="bubble">${esc(pt)}</div>${tickHtml}`;
     prevSid=msg.userId;
   }
   wrap.appendChild(div);
@@ -2136,6 +2152,74 @@ async function ownerJoinRoom(code, isWTRoom) {
 }
 
 // ══════════════════════════════════
+//  ✓✓ READ RECEIPTS / TICKS
+// ══════════════════════════════════
+let _readTrackInterval = null;
+let _othersReadTs      = {}; // userId → last read timestamp
+let _readByRef         = null;
+
+// Returns tick HTML based on whether others have read past this timestamp
+function _getTick(msgTs) {
+  const seen = Object.entries(_othersReadTs).some(([uid, ts]) => uid !== state.userId && ts >= msgTs);
+  return seen
+    ? `<span class="msg-tick seen">✓✓</span>`
+    : `<span class="msg-tick">✓</span>`;
+}
+
+// Update all visible ticks after readBy changes
+function _refreshTicks() {
+  document.querySelectorAll('.msg-tick').forEach(el => {
+    // Get parent msg-meta, find sibling msg-time to get approx timestamp
+    // Instead we store ts in tick id: id="tick-{ts}"
+    const id  = el.id || el.parentElement?.querySelector('[id^="tick-"]')?.id;
+    if (!id) return;
+    const ts = parseInt(id.replace('tick-',''));
+    if (isNaN(ts)) return;
+    const seen = Object.entries(_othersReadTs).some(([uid, ts2]) => uid !== state.userId && ts2 >= ts);
+    el.className = seen ? 'msg-tick seen' : 'msg-tick';
+    el.textContent = seen ? '✓✓' : '✓';
+  });
+}
+
+function startReadTracking() {
+  if (!state.roomId || !state.userId) return;
+  const myRef = db.ref(`rooms/${state.roomId}/readBy/${state.userId}`);
+
+  // Mark as read now
+  myRef.set(Date.now());
+  myRef.onDisconnect().remove();
+
+  // Keep updating while tab is visible
+  if (_readTrackInterval) clearInterval(_readTrackInterval);
+  _readTrackInterval = setInterval(() => {
+    if (document.visibilityState === 'visible') myRef.set(Date.now());
+  }, 3000);
+
+  // Listen to others' read timestamps
+  if (_readByRef) _readByRef.off();
+  _readByRef = db.ref(`rooms/${state.roomId}/readBy`);
+  _readByRef.on('value', snap => {
+    _othersReadTs = snap.val() || {};
+    _refreshTicks();
+  });
+}
+
+function stopReadTracking() {
+  if (_readTrackInterval) { clearInterval(_readTrackInterval); _readTrackInterval = null; }
+  if (_readByRef) { _readByRef.off(); _readByRef = null; }
+  if (state.roomId && state.userId)
+    db.ref(`rooms/${state.roomId}/readBy/${state.userId}`).remove();
+  _othersReadTs = {};
+}
+
+// Update on visibility change (user comes back to tab)
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && state.roomId) {
+    db.ref(`rooms/${state.roomId}/readBy/${state.userId}`).set(Date.now());
+  }
+});
+
+// ══════════════════════════════════
 //  HELPERS
 // ══════════════════════════════════
 function uid(n){return Array.from(crypto.getRandomValues(new Uint8Array(n))).map(b=>b.toString(36)).join('').substring(0,n);}
@@ -2151,6 +2235,44 @@ function ls(k,v){
   if(v===null){try{localStorage.removeItem('qc_'+k);}catch(e){}}
   else{try{localStorage.setItem('qc_'+k,v);}catch(e){}}
 }
+// ── Pull to Refresh ──────────────────────────────────────
+(function(){
+  let startY=0, pulling=false, threshold=70;
+  const ind=document.getElementById('ptrIndicator');
+
+  document.addEventListener('touchstart',e=>{
+    // Only trigger on home/auth screens and when scrolled to top
+    const screen=document.querySelector('.screen.active');
+    if(!screen) return;
+    const id=screen.id;
+    if(!['homeScreen','authScreen','wtRoomScreen','chatScreen'].includes(id)) return;
+    // Must be at top of scrollable area
+    const scrollable=screen.querySelector('.msgs-wrap,.home-hero,.auth-logo')?.closest('.screen')||screen;
+    if(scrollable.scrollTop>0) return;
+    startY=e.touches[0].clientY; pulling=true;
+  },{passive:true});
+
+  document.addEventListener('touchmove',e=>{
+    if(!pulling) return;
+    const dy=e.touches[0].clientY-startY;
+    if(dy>20 && ind){
+      ind.classList.add('show');
+      ind.textContent = dy>threshold ? '↑ Release to refresh' : '↓ Pull to refresh';
+    }
+  },{passive:true});
+
+  document.addEventListener('touchend',e=>{
+    if(!pulling){return;}
+    const dy=e.changedTouches[0].clientY-startY;
+    pulling=false;
+    if(ind) ind.classList.remove('show');
+    if(dy>threshold){
+      // Reload page
+      window.location.reload();
+    }
+  },{passive:true});
+})();
+
 document.querySelectorAll('.modal-backdrop').forEach(el=>{
   if(el.id==='wtLoginModal') return; // WT login modal can't be dismissed by tapping outside
   el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('open');});
