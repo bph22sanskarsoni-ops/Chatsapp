@@ -599,11 +599,11 @@
 <div class="modal-backdrop" id="settingsModal">
   <div class="modal-sheet" style="max-height:88vh;overflow-y:auto;">
     <div class="modal-handle"></div>
-    <div class="modal-title">⚙️ Admin Settings</div>
+    <div class="modal-title">⚙️ Settings</div>
 
-    <!-- Add Tag Section -->
+    <!-- Admin Power Section -->
     <div class="settings-section">
-      <div class="settings-section-title">🏷️ Add / Update Tag</div>
+      <div class="settings-section-title">👑 Admin Power — Tags</div>
 
       <span class="field-lbl" style="font-size:11px;color:var(--text2);font-weight:600;letter-spacing:.5px;text-transform:uppercase;display:block;margin-bottom:6px;">User UID</span>
       <input class="text-input" id="tagUidInput" placeholder="Firebase UID paste karo" style="margin-bottom:10px;">
@@ -634,16 +634,40 @@
       </div>
 
       <div class="auth-err" id="tagErr"></div>
-      <button class="btn btn-accent" style="width:100%;margin-top:14px;" onclick="saveTagFromSettings()">Save Tag ✅</button>
+      <div class="modal-btns" style="margin-top:14px;">
+        <button class="btn btn-ghost" onclick="removeTagFromSettings()">Remove Tag 🗑️</button>
+        <button class="btn btn-accent" onclick="saveTagFromSettings()">Save Tag ✅</button>
+      </div>
     </div>
 
-    <!-- Existing Tags -->
+    <!-- Current Tags List -->
     <div class="settings-section">
       <div class="settings-section-title">📋 Current Tags</div>
       <div id="settingsTagList"><div style="color:var(--text2);font-size:13px;">Loading…</div></div>
     </div>
 
-    <button class="btn btn-ghost" style="width:100%;" onclick="closeModal('settingsModal')">Close</button>
+    <!-- WT Access Section -->
+    <div class="settings-section">
+      <div class="settings-section-title">📻 Walkie-Talkie Access</div>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:12px;">Sirf in UIDs ko WT access milega. Baaki sabko "Not Permitted" dikhega.</p>
+
+      <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <input class="text-input" id="wtAccessUID" placeholder="User UID paste karo" style="flex:1;">
+        <button class="btn btn-accent" style="flex:0 0 auto;padding:0 16px;" onclick="grantWTAccess()">Add ✅</button>
+      </div>
+      <div class="auth-err" id="wtAccessErr"></div>
+      <div id="wtAccessList"><div style="color:var(--text2);font-size:13px;">Loading…</div></div>
+    </div>
+
+    <!-- Close -->
+    <button class="btn btn-ghost" style="width:100%;margin-top:4px;" onclick="closeModal('settingsModal')">Close</button>
+
+    <!-- Logout — always at bottom -->
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.06);">
+      <button class="btn" style="width:100%;background:rgba(255,95,95,.1);color:var(--red);border:1px solid rgba(255,95,95,.2);" onclick="doLogout()">
+        🚪 Logout
+      </button>
+    </div>
   </div>
 </div>
 
@@ -1483,6 +1507,18 @@ if('serviceWorker' in navigator) {
   });
 }
 
+// ── Logout ──────────────────────────────────────────────
+async function doLogout() {
+  closeModal('settingsModal');
+  try {
+    await auth.signOut();
+    _authUser = null; isOwner = false;
+    ls('roomId', null);
+    toast('👋 Logged out');
+    showScreen('authScreen');
+  } catch(e) { toast('❌ Logout failed'); }
+}
+
 // ── Auth functions ──────────────────────────────────────
 let _authTab = 'login';
 function switchAuthTab(tab) {
@@ -1513,6 +1549,47 @@ async function doAuth() {
 }
 
 // WT whitelist check — only allowed UIDs can use WT
+// ── WT Access Management ────────────────────────────────
+async function grantWTAccess() {
+  const uid  = document.getElementById('wtAccessUID').value.trim();
+  const errEl= document.getElementById('wtAccessErr');
+  errEl.style.display='none';
+  if(!uid){ errEl.textContent='⚠️ UID daalo'; errEl.style.display='block'; return; }
+  try {
+    await db.ref('wtAllowed/'+uid).set({ grantedAt: Date.now(), grantedBy: state.userId });
+    document.getElementById('wtAccessUID').value='';
+    toast('✅ WT access granted!');
+    loadWTAccessList();
+  } catch(e){ errEl.textContent='❌ '+e.message; errEl.style.display='block'; }
+}
+
+async function loadWTAccessList() {
+  const list=document.getElementById('wtAccessList');
+  if(!list)return;
+  list.innerHTML='<div style="color:var(--text2);font-size:13px;">Loading…</div>';
+  try {
+    const snap=await db.ref('wtAllowed').once('value');
+    if(!snap.exists()){ list.innerHTML='<div style="color:var(--text2);font-size:13px;">No users yet</div>'; return; }
+    list.innerHTML='';
+    snap.forEach(child=>{
+      const uid=child.key;
+      const row=document.createElement('div');
+      row.style.cssText='display:flex;align-items:center;gap:8px;background:var(--surface2);border-radius:10px;padding:10px 12px;margin-bottom:6px;';
+      row.innerHTML=`
+        <div style="flex:1;font-size:12px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${uid}">${uid}</div>
+        <div style="font-size:11px;font-weight:700;background:rgba(0,200,150,.15);color:var(--accent);border-radius:20px;padding:2px 8px;flex-shrink:0;">WT ✅</div>
+        <button onclick="revokeWTAccess('${uid}')" style="background:none;border:none;color:var(--red);font-size:16px;cursor:pointer;flex-shrink:0;">🗑️</button>`;
+      list.appendChild(row);
+    });
+  } catch(e){ list.innerHTML='<div style="color:var(--red);font-size:13px;">Error loading</div>'; }
+}
+
+async function revokeWTAccess(uid) {
+  await db.ref('wtAllowed/'+uid).remove();
+  toast('🗑️ WT access revoked');
+  loadWTAccessList();
+}
+
 async function canUseWT() {
   if (isOwner || isAdmin) return true;
   if (!_authUser) return false;
@@ -1919,9 +1996,18 @@ function _switchMode(mode) {
   if (isWT) {
     canUseWT().then(ok => {
       if (!ok) {
-        // Not authorized for WT
-        toast('❌ WT access nahi hai. Owner se request karo.');
         _switchMode('chat');
+        // Show full-screen style alert
+        setTimeout(() => {
+          const t = document.getElementById('toast');
+          t.innerHTML = '🔒 You are not permitted to use Walkie-Talkie';
+          t.classList.add('show');
+          t.style.cssText += 'bottom:50%;transform:translate(-50%,50%);text-align:center;white-space:normal;max-width:260px;padding:14px 20px;line-height:1.4;border-radius:16px;';
+          setTimeout(() => {
+            t.classList.remove('show');
+            t.style.cssText='';
+          }, 3500);
+        }, 100);
       }
     });
   }
@@ -2351,6 +2437,7 @@ function _refreshAllTags() {
 // ── Settings Modal ──────────────────────────────────────
 function openSettingsModal() {
   openModal('settingsModal');
+  loadWTAccessList();
   loadSettingsTagList();
   updateSettingsTagPreview();
 }
