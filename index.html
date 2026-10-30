@@ -176,7 +176,7 @@
     .ian-close{background:none;border:none;color:var(--text2);font-size:18px;cursor:pointer;flex-shrink:0;padding:2px 4px;}
 
     /* MESSAGES */
-    .messages-wrap{flex:1;overflow-y:auto;padding:14px 12px;display:flex;flex-direction:column;gap:3px;scroll-behavior:smooth;}
+    .messages-wrap{flex:1;overflow-y:auto;overscroll-behavior-y:contain;padding:14px 12px;display:flex;flex-direction:column;gap:3px;scroll-behavior:smooth;}
     .messages-wrap::-webkit-scrollbar{width:4px;}
     .messages-wrap::-webkit-scrollbar-thumb{background:var(--surface2);border-radius:4px;}
     .msg{display:flex;flex-direction:column;max-width:78%;}
@@ -341,9 +341,10 @@
     .global-card-type.chat{background:rgba(0,200,150,.1);color:var(--accent);}
     .global-card-type.wt{background:rgba(96,165,250,.1);color:#60a5fa;}
     .global-empty{color:var(--text2);font-size:13px;text-align:center;padding:10px 0;}
-    /* Pull to refresh */
-    .ptr-indicator{position:fixed;top:0;left:50%;transform:translateX(-50%) translateY(-60px);background:var(--surface);border-radius:0 0 20px 20px;padding:8px 20px;font-size:13px;color:var(--accent);font-weight:700;z-index:9000;transition:transform .25s;box-shadow:0 4px 16px rgba(0,0,0,.3);}
-    .ptr-indicator.show{transform:translateX(-50%) translateY(0);}
+    .ctrl-flip,.ctrl-share{background:#243447;display:none;}
+    .ctrl-share.on{background:var(--accent);}
+    .call-controls{flex-wrap:wrap;gap:10px;}
+    #callOverlay .ctrl{width:50px;height:50px;font-size:20px;}
   </style>
 </head>
 <body>
@@ -466,6 +467,8 @@
   <div class="call-controls">
     <button class="ctrl ctrl-mute" id="btnMute" onclick="toggleMute()" title="Mute">🎤</button>
     <button class="ctrl ctrl-cam"  id="btnCam"  onclick="toggleCam()"  title="Camera">📷</button>
+    <button class="ctrl ctrl-flip" id="btnFlip" onclick="switchCamera()" title="Switch Camera">🔄</button>
+    <button class="ctrl ctrl-share" id="btnShare" onclick="toggleScreenShare()" title="Share Screen">🖥️</button>
     <button class="ctrl ctrl-pip"  id="btnPip"  onclick="enterPiP()"   title="Picture in Picture">⧉</button>
     <button class="ctrl ctrl-end"               onclick="endCall()"    title="End">📵</button>
   </div>
@@ -595,12 +598,11 @@
   </div>
   <button class="ian-close" onclick="hideInAppNotif()">✕</button>
 </div>
-<!-- SETTINGS MODAL -->
-<div class="modal-backdrop" id="settingsModal">
+<!-- TAG PANEL -->
+<div class="modal-backdrop" id="tagPanel">
   <div class="modal-sheet" style="max-height:88vh;overflow-y:auto;">
     <div class="modal-handle"></div>
-    <div class="modal-title">⚙️ Settings</div>
-
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;"><button onclick="closeModal('tagPanel');openModal('settingsModal')" style="background:none;border:none;color:var(--text2);font-size:26px;cursor:pointer;line-height:1;">‹</button><div class="modal-title" style="margin-bottom:0;">🏷️ Add Member Tags</div></div>
     <!-- Admin Power Section -->
     <div class="settings-section">
       <div class="settings-section-title">👑 Admin Power — Tags</div>
@@ -646,6 +648,15 @@
       <div id="settingsTagList"><div style="color:var(--text2);font-size:13px;">Loading…</div></div>
     </div>
 
+    <button class="btn btn-ghost" style="width:100%;margin-top:4px;" onclick="closeModal('tagPanel');openModal('settingsModal')">Back</button>
+  </div>
+</div>
+
+<!-- WT PERMIT PANEL -->
+<div class="modal-backdrop" id="wtPermitPanel">
+  <div class="modal-sheet" style="max-height:88vh;overflow-y:auto;">
+    <div class="modal-handle"></div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;"><button onclick="closeModal('wtPermitPanel');openModal('settingsModal')" style="background:none;border:none;color:var(--text2);font-size:26px;cursor:pointer;line-height:1;">‹</button><div class="modal-title" style="margin-bottom:0;">📻 Walkie-Talkie Permit</div></div>
     <!-- WT Access Section -->
     <div class="settings-section">
       <div class="settings-section-title">📻 Walkie-Talkie Access</div>
@@ -657,6 +668,30 @@
       </div>
       <div class="auth-err" id="wtAccessErr"></div>
       <div id="wtAccessList"><div style="color:var(--text2);font-size:13px;">Loading…</div></div>
+    </div>
+
+    <button class="btn btn-ghost" style="width:100%;margin-top:4px;" onclick="closeModal('wtPermitPanel');openModal('settingsModal')">Back</button>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="modal-backdrop" id="settingsModal">
+  <div class="modal-sheet" style="max-height:88vh;overflow-y:auto;">
+    <div class="modal-handle"></div>
+    <div class="modal-title">⚙️ Settings</div>
+
+    <!-- Option buttons -->
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:6px;">
+      <button class="btn" onclick="openTagPanel()" style="width:100%;background:rgba(0,200,150,.08);color:var(--accent);border:1px solid rgba(0,200,150,.2);text-align:left;padding:14px 16px;display:flex;align-items:center;gap:12px;font-size:15px;">
+        <span style="font-size:22px;">🏷️</span>
+        <span style="flex:1;"><span style="display:block;">Add Member Tags</span><span style="display:block;font-size:12px;color:var(--text2);font-weight:400;margin-top:2px;">UID se kisi ko bhi tag lagao</span></span>
+        <span style="font-size:18px;color:var(--text2);">›</span>
+      </button>
+      <button class="btn" onclick="openWTPanel()" style="width:100%;background:rgba(96,165,250,.08);color:#60a5fa;border:1px solid rgba(96,165,250,.2);text-align:left;padding:14px 16px;display:flex;align-items:center;gap:12px;font-size:15px;">
+        <span style="font-size:22px;">📻</span>
+        <span style="flex:1;"><span style="display:block;">Walkie-Talkie Permit</span><span style="display:block;font-size:12px;color:var(--text2);font-weight:400;margin-top:2px;">Kaun WT use kar sakta hai</span></span>
+        <span style="font-size:18px;color:var(--text2);">›</span>
+      </button>
     </div>
 
     <!-- Close -->
@@ -672,7 +707,6 @@
 </div>
 
 <div id="toast"></div>
-<div class="ptr-indicator" id="ptrIndicator">↓ Release to refresh</div>
 <audio id="keepAliveAudio" src="./silence.wav" loop preload="auto" playsinline style="display:none;"></audio>
 
 <!-- Capacitor runtime (only active inside APK, harmless on website) -->
@@ -759,7 +793,7 @@ let bgListeners={}, unreadCounts={}, ianQueue=[], ianShowing=false, ianTimer=nul
 let appMode = 'chat'; // 'chat' | 'walkie'
 let wtUser  = null;   // logged-in Firebase user
 let isAdmin  = ls('isAdmin') === '1'; // persists across sessions
-let isOwner  = false;  // auto-set when OWNER_UID logs in
+let isOwner  = ls('isOwner') === '1';  // persisted so name never flips to Admin on reload
 let _authUser = null;  // current Firebase Auth user
 let wt = {
   active:false, stream:null, peers:{}, muted:false,
@@ -1035,11 +1069,11 @@ async function startCall(type){
   // Write call to Firebase — everyone in room sees it
   await db.ref(`rooms/${state.roomId}/activeCall`).set({
     callId:cs.callId, type, startedAt:Date.now(),
-    initiatorId:state.userId, initiatorName:state.username,
+    initiatorId:state.userId, initiatorName:_myName(),
   });
 
   // Post call card in chat
-  _postCallMsg(cs.callId, type, state.username);
+  _postCallMsg(cs.callId, type, _myName());
   // Notify others — browser band ho tab bhi ring kare!
 
   _openCallUI(type);
@@ -1156,6 +1190,8 @@ function _openCallUI(type){
   document.getElementById('callRoomLbl').textContent=getRoomDisplayName(state.roomId);
   document.getElementById('callGrid').innerHTML='';
   document.getElementById('btnCam').style.display=type==='video'?'flex':'none';
+  document.getElementById('btnFlip').style.display=type==='video'?'flex':'none';
+  document.getElementById('btnShare').style.display=type==='video'?'flex':'none';
   if(type==='video'){
     document.getElementById('localPip').style.display='block';
     document.getElementById('localPipVideo').srcObject=cs.localStream;
@@ -1233,7 +1269,62 @@ function toggleCam(){
   b.textContent=cs.camOff?'🚫':'📷'; b.classList.toggle('off',cs.camOff);
   updateCallNotif();
 }
+function _setLocalVideoSrc(stream){
+  document.querySelectorAll('#callOverlay video').forEach(v=>{ if(v.muted) v.srcObject=stream; });
+  const pip=document.getElementById('localPipVideo'); if(pip) pip.srcObject=stream;
+}
+function _replaceVideoTrackEverywhere(track){
+  Object.values(cs.peers).forEach(p=>{
+    const s=p.pc.getSenders().find(s=>s.track&&s.track.kind==='video');
+    if(s) s.replaceTrack(track);
+  });
+}
+async function switchCamera(){
+  if(!cs.active||cs.type!=='video'||!cs.localStream) return;
+  if(cs.screenStream){ toast('Pehle screen share band karo'); return; }
+  const prev=cs.facing||'user';
+  const next=prev==='user'?'environment':'user';
+  const old=cs.localStream.getVideoTracks()[0];
+  if(old){ old.stop(); cs.localStream.removeTrack(old); }
+  const tryGet=async f=>{ const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:f}},audio:false}); return s.getVideoTracks()[0]; };
+  let nt=null;
+  try{ nt=await tryGet(next); cs.facing=next; }
+  catch(e){ try{ nt=await tryGet(prev); cs.facing=prev; toast('❌ Camera switch nahi ho paya'); }catch(e2){ toast('❌ Camera nahi mila'); return; } }
+  nt.enabled=!cs.camOff;
+  cs.localStream.addTrack(nt);
+  _replaceVideoTrackEverywhere(nt);
+  _setLocalVideoSrc(cs.localStream);
+}
+async function toggleScreenShare(){
+  if(!cs.active||cs.type!=='video') return;
+  if(cs.screenStream){ _stopScreenShare(); return; }
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getDisplayMedia){
+    toast('❌ Is phone/browser me screen share support nahi hai (desktop Chrome me chalega)'); return;
+  }
+  try{
+    const ds=await navigator.mediaDevices.getDisplayMedia({video:true,audio:false});
+    const st=ds.getVideoTracks()[0];
+    cs.screenStream=ds;
+    st.onended=()=>_stopScreenShare();
+    _replaceVideoTrackEverywhere(st);
+    _setLocalVideoSrc(ds);
+    document.getElementById('btnShare').classList.add('on');
+    toast('🖥️ Screen share ON');
+  }catch(e){ toast('Screen share cancel ho gaya'); }
+}
+function _stopScreenShare(){
+  if(!cs.screenStream) return;
+  cs.screenStream.getTracks().forEach(t=>{ t.onended=null; t.stop(); });
+  cs.screenStream=null;
+  const cam=cs.localStream&&cs.localStream.getVideoTracks()[0];
+  if(cam) _replaceVideoTrackEverywhere(cam);
+  if(cs.localStream) _setLocalVideoSrc(cs.localStream);
+  const b=document.getElementById('btnShare'); if(b) b.classList.remove('on');
+}
 function endCall(){
+  _stopScreenShare();
+  ['btnFlip','btnShare'].forEach(id=>{const b=document.getElementById(id); if(b){b.style.display='none';b.classList.remove('on');}});
+  cs.facing='user';
   disableBackgroundMode(); // APK: foreground service stop
   releaseWakeLock(); stopKeepAliveAudio(); clearMediaSession();
   dismissCallNotif();
@@ -1510,6 +1601,7 @@ if('serviceWorker' in navigator) {
 // ── Logout ──────────────────────────────────────────────
 async function doLogout() {
   closeModal('settingsModal');
+  isOwner = false; isAdmin = false; ls('isOwner', null); ls('isAdmin', null);
   try {
     await auth.signOut();
     _authUser = null; isOwner = false;
@@ -1617,7 +1709,8 @@ window.addEventListener('load', async () => {
     if (user) {
       // Check if owner
       isOwner = (user.uid === OWNER_UID);
-      if (isOwner) { isAdmin = true; ls('isAdmin', '1'); }
+      if (isOwner) { isAdmin = true; ls('isAdmin', '1'); ls('isOwner', '1'); }
+      else { ls('isOwner', null); }
       _updateOwnerUI();
       if (isOwner) loadGlobalRooms();
 
@@ -2114,7 +2207,7 @@ async function enterWTRoom() {
       document.getElementById('wtSpeakerRing').textContent  = '🔊';
       document.getElementById('wtSpeakerLabel').textContent = d.userId === state.userId ? 'YOU ARE TALKING' : 'TALKING';
       const _dn = d.userId===state.userId
-        ? (isAdmin?'[Admin] '+state.username:state.username)+' (You)'
+        ? _myName()+' (You)'
         : d.name;
       const _nel = document.getElementById('wtSpeakerName');
       _nel.textContent = _dn;
@@ -2143,8 +2236,8 @@ function _setupPTT() {
     wt.muted = false;
     btn.classList.add('pressed');
     btn.querySelector('.wt-ptt-label').textContent = 'TALKING…';
-    const _tn=isAdmin?'[Admin] '+state.username:state.username;
-    db.ref(`rooms/${state.roomId}/wtTalking`).set({ userId:state.userId, name:_tn, isAdmin:isAdmin, at:Date.now() });
+    const _tn=_myName();
+    db.ref(`rooms/${state.roomId}/wtTalking`).set({ userId:state.userId, name:_tn, isOwner:isOwner, isAdmin:isAdmin, at:Date.now() });
   };
   const stopTalk = () => {
     if (!wt.active || !wt.stream) return;
@@ -2435,12 +2528,9 @@ function _refreshAllTags() {
 }
 
 // ── Settings Modal ──────────────────────────────────────
-function openSettingsModal() {
-  openModal('settingsModal');
-  loadWTAccessList();
-  loadSettingsTagList();
-  updateSettingsTagPreview();
-}
+function openSettingsModal() { openModal('settingsModal'); }
+function openTagPanel() { closeModal('settingsModal'); openModal('tagPanel'); loadSettingsTagList(); updateSettingsTagPreview(); }
+function openWTPanel() { closeModal('settingsModal'); openModal('wtPermitPanel'); loadWTAccessList(); }
 
 function selectSwatch(el) {
   document.querySelectorAll('.swatch').forEach(s => s.classList.remove('selected'));
@@ -2528,6 +2618,7 @@ function _updateSettingsBtn() {
 // ══════════════════════════════════
 //  HELPERS
 // ══════════════════════════════════
+function _myName(){ return (isOwner?'[Owner] ':(isAdmin?'[Admin] ':''))+(state.username||''); }
 function uid(n){return Array.from(crypto.getRandomValues(new Uint8Array(n))).map(b=>b.toString(36)).join('').substring(0,n);}
 function genCode(){const C='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';return Array.from({length:6},()=>C[Math.floor(Math.random()*C.length)]).join('');}
 function esc(s=''){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');}
@@ -2541,44 +2632,6 @@ function ls(k,v){
   if(v===null){try{localStorage.removeItem('qc_'+k);}catch(e){}}
   else{try{localStorage.setItem('qc_'+k,v);}catch(e){}}
 }
-// ── Pull to Refresh ──────────────────────────────────────
-(function(){
-  let startY=0, pulling=false, threshold=70;
-  const ind=document.getElementById('ptrIndicator');
-
-  document.addEventListener('touchstart',e=>{
-    // Only trigger on home/auth screens and when scrolled to top
-    const screen=document.querySelector('.screen.active');
-    if(!screen) return;
-    const id=screen.id;
-    if(!['homeScreen','authScreen','wtRoomScreen','chatScreen'].includes(id)) return;
-    // Must be at top of scrollable area
-    const scrollable=screen.querySelector('.msgs-wrap,.home-hero,.auth-logo')?.closest('.screen')||screen;
-    if(scrollable.scrollTop>0) return;
-    startY=e.touches[0].clientY; pulling=true;
-  },{passive:true});
-
-  document.addEventListener('touchmove',e=>{
-    if(!pulling) return;
-    const dy=e.touches[0].clientY-startY;
-    if(dy>20 && ind){
-      ind.classList.add('show');
-      ind.textContent = dy>threshold ? '↑ Release to refresh' : '↓ Pull to refresh';
-    }
-  },{passive:true});
-
-  document.addEventListener('touchend',e=>{
-    if(!pulling){return;}
-    const dy=e.changedTouches[0].clientY-startY;
-    pulling=false;
-    if(ind) ind.classList.remove('show');
-    if(dy>threshold){
-      // Reload page
-      window.location.reload();
-    }
-  },{passive:true});
-})();
-
 document.querySelectorAll('.modal-backdrop').forEach(el=>{
   if(el.id==='wtLoginModal') return; // WT login modal can't be dismissed by tapping outside
   el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('open');});
