@@ -607,8 +607,8 @@
     <div class="settings-section">
       <div class="settings-section-title">👑 Admin Power — Tags</div>
 
-      <span class="field-lbl" style="font-size:11px;color:var(--text2);font-weight:600;letter-spacing:.5px;text-transform:uppercase;display:block;margin-bottom:6px;">User UID</span>
-      <input class="text-input" id="tagUidInput" placeholder="Firebase UID paste karo" style="margin-bottom:10px;">
+      <span class="field-lbl" style="font-size:11px;color:var(--text2);font-weight:600;letter-spacing:.5px;text-transform:uppercase;display:block;margin-bottom:6px;">User Email</span>
+      <input class="text-input" id="tagUidInput" type="email" autocapitalize="off" autocomplete="off" placeholder="user@email.com" style="margin-bottom:10px;">
 
       <span class="field-lbl" style="font-size:11px;color:var(--text2);font-weight:600;letter-spacing:.5px;text-transform:uppercase;display:block;margin-bottom:6px;">Tag Text</span>
       <input class="text-input" id="tagTextInput" maxlength="20" placeholder="VIP, MOD, Dev, Legend…" oninput="updateSettingsTagPreview()" style="margin-bottom:10px;">
@@ -660,10 +660,10 @@
     <!-- WT Access Section -->
     <div class="settings-section">
       <div class="settings-section-title">📻 Walkie-Talkie Access</div>
-      <p style="font-size:13px;color:var(--text2);margin-bottom:12px;">Sirf in UIDs ko WT access milega. Baaki sabko "Not Permitted" dikhega.</p>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:12px;">Sirf in emails ko WT access milega. Baaki sabko "Not Permitted" dikhega.</p>
 
       <div style="display:flex;gap:8px;margin-bottom:10px;">
-        <input class="text-input" id="wtAccessUID" placeholder="User UID paste karo" style="flex:1;">
+        <input class="text-input" id="wtAccessUID" type="email" autocapitalize="off" autocomplete="off" placeholder="user@email.com" style="flex:1;">
         <button class="btn btn-accent" style="flex:0 0 auto;padding:0 16px;" onclick="grantWTAccess()">Add ✅</button>
       </div>
       <div class="auth-err" id="wtAccessErr"></div>
@@ -1384,7 +1384,7 @@ function _hideIncoming(){
 function _postCallMsg(callId,type,senderName){
   db.ref(`rooms/${state.roomId}/messages`).push({
     type:'call',callId,callType:type,
-    sender:senderName,userId:state.userId,ts:Date.now(),
+    sender:senderName,userId:state.userId,eh:_myEH||null,ts:Date.now(),
   });
 }
 
@@ -1643,14 +1643,15 @@ async function doAuth() {
 // WT whitelist check — only allowed UIDs can use WT
 // ── WT Access Management ────────────────────────────────
 async function grantWTAccess() {
-  const uid  = document.getElementById('wtAccessUID').value.trim();
-  const errEl= document.getElementById('wtAccessErr');
+  const email = document.getElementById('wtAccessUID').value.trim().toLowerCase();
+  const errEl = document.getElementById('wtAccessErr');
   errEl.style.display='none';
-  if(!uid){ errEl.textContent='⚠️ UID daalo'; errEl.style.display='block'; return; }
+  if(!_validEmail(email)){ errEl.textContent='⚠️ Sahi email daalo'; errEl.style.display='block'; return; }
   try {
-    await db.ref('wtAllowed/'+uid).set({ grantedAt: Date.now(), grantedBy: state.userId });
+    const key = await emailHash(email);
+    await db.ref('wtAllowed/'+key).set({ email, grantedAt: Date.now(), grantedBy: state.userId });
     document.getElementById('wtAccessUID').value='';
-    toast('✅ WT access granted!');
+    toast('✅ WT access: ' + email);
     loadWTAccessList();
   } catch(e){ errEl.textContent='❌ '+e.message; errEl.style.display='block'; }
 }
@@ -1664,13 +1665,14 @@ async function loadWTAccessList() {
     if(!snap.exists()){ list.innerHTML='<div style="color:var(--text2);font-size:13px;">No users yet</div>'; return; }
     list.innerHTML='';
     snap.forEach(child=>{
-      const uid=child.key;
+      const key=child.key, d=child.val()||{};
+      const label=d.email||key;
       const row=document.createElement('div');
       row.style.cssText='display:flex;align-items:center;gap:8px;background:var(--surface2);border-radius:10px;padding:10px 12px;margin-bottom:6px;';
       row.innerHTML=`
-        <div style="flex:1;font-size:12px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${uid}">${uid}</div>
+        <div style="flex:1;font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(label)}">${esc(label)}</div>
         <div style="font-size:11px;font-weight:700;background:rgba(0,200,150,.15);color:var(--accent);border-radius:20px;padding:2px 8px;flex-shrink:0;">WT ✅</div>
-        <button onclick="revokeWTAccess('${uid}')" style="background:none;border:none;color:var(--red);font-size:16px;cursor:pointer;flex-shrink:0;">🗑️</button>`;
+        <button onclick="revokeWTAccess('${key}')" style="background:none;border:none;color:var(--red);font-size:16px;cursor:pointer;flex-shrink:0;">🗑️</button>`;
       list.appendChild(row);
     });
   } catch(e){ list.innerHTML='<div style="color:var(--red);font-size:13px;">Error loading</div>'; }
@@ -1686,8 +1688,11 @@ async function canUseWT() {
   if (isOwner || isAdmin) return true;
   if (!_authUser) return false;
   try {
-    const snap = await db.ref('wtAllowed/' + _authUser.uid).once('value');
-    return snap.exists();
+    const h = _myEH || await emailHash(_authUser.email);
+    const s1 = await db.ref('wtAllowed/' + h).once('value');
+    if (s1.exists()) return true;
+    const s2 = await db.ref('wtAllowed/' + _authUser.uid).once('value'); // old UID entries still work
+    return s2.exists();
   } catch(e) { return false; }
 }
 
@@ -1704,6 +1709,7 @@ window.addEventListener('load', async () => {
   // Firebase Auth — handles everything
   auth.onAuthStateChanged(async user => {
     _authUser = user;
+    try { _myEH = user && user.email ? await emailHash(user.email) : null; } catch(e) { _myEH = null; }
     wtUser    = user;
 
     if (user) {
@@ -1953,10 +1959,11 @@ async function renderMsg(msg){
          </div>`
       : `<div class="msg-time">${fmtTime(msg.ts)}</div>`;
     // Tag badge for this sender
-    const _tag = _tagsCache[msg.userId||''];
+    const _tkey = msg.eh || msg.userId || '';
+    const _tag = _tagsCache[_tkey];
     const _tagHtml = _tag ? _tagBadgeHtml(_tag) : '';
     const _senderEl = (!isMe&&ns)
-      ? `<div class="${sClass}"><span data-uid-tag="${msg.userId||''}">${_tagHtml}</span>${esc(msg.sender)}</div>`
+      ? `<div class="${sClass}"><span data-uid-tag="${_tkey}">${_tagHtml}</span>${esc(msg.sender)}</div>`
       : '';
     div.innerHTML=`${_senderEl}<div class="bubble">${esc(pt)}</div>${tickHtml}`;
     prevSid=msg.userId;
@@ -1973,7 +1980,7 @@ async function sendMsg(){
                       : (isAdmin ? '[Admin] ' + state.username : state.username);
     await db.ref(`rooms/${state.roomId}/messages`).push({
       text:enc, sender:senderName, isAdmin:isAdmin, isOwner:isOwner,
-      userId:state.userId, ts:Date.now(), type:'chat'
+      userId:state.userId, eh:_myEH||null, ts:Date.now(), type:'chat'
     });
   }
   catch(e){toast('❌ Failed: '+e.message);}
@@ -2490,6 +2497,13 @@ document.addEventListener('visibilitychange', () => {
 //  🏷️ TAG SYSTEM
 // ══════════════════════════════════
 let _tagsCache = {};
+let _myEH = null; // sha-256 of my email (guest = null)
+async function emailHash(e){
+  const b=new TextEncoder().encode((e||'').trim().toLowerCase());
+  const h=await crypto.subtle.digest('SHA-256',b);
+  return Array.from(new Uint8Array(h)).map(x=>x.toString(16).padStart(2,'0')).join('');
+}
+function _validEmail(e){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e); }
 let _selectedTagColor = '#00c896';
 
 function listenTags() {
@@ -2557,21 +2571,22 @@ function updateSettingsTagPreview() {
 }
 
 async function saveTagFromSettings() {
-  const uid   = document.getElementById('tagUidInput').value.trim();
+  const email = document.getElementById('tagUidInput').value.trim().toLowerCase();
   const text  = document.getElementById('tagTextInput').value.trim();
   const color = _selectedTagColor;
   const errEl = document.getElementById('tagErr');
   errEl.style.display = 'none';
 
-  if (!uid)  { errEl.textContent = '⚠️ UID daalo'; errEl.style.display = 'block'; return; }
+  if (!_validEmail(email)) { errEl.textContent = '⚠️ Sahi email daalo'; errEl.style.display = 'block'; return; }
   if (!text) { errEl.textContent = '⚠️ Tag text daalo'; errEl.style.display = 'block'; return; }
 
   try {
-    await db.ref('tags/' + uid).set({ text, color, taggedBy: state.userId, at: Date.now() });
-    _tagsCache[uid] = { text, color };
+    const key = await emailHash(email);
+    await db.ref('tags/' + key).set({ text, color, email, taggedBy: state.userId, at: Date.now() });
+    _tagsCache[key] = { text, color, email };
     document.getElementById('tagUidInput').value = '';
     document.getElementById('tagTextInput').value = '';
-    toast('🏷️ Tag saved!');
+    toast('🏷️ Tag saved for ' + email);
     loadSettingsTagList();
     _refreshAllTags();
   } catch(e) {
@@ -2594,7 +2609,7 @@ async function loadSettingsTagList() {
       row.className = 'tag-list-item';
       row.innerHTML = `
         <span class="tag-badge" style="background:${d.color};color:${_tagTextColor(d.color)};flex-shrink:0;">${esc(d.text)}</span>
-        <span class="tag-list-uid">${child.key}</span>
+        <span class="tag-list-uid">${esc(d.email || child.key)}</span>
         <button class="tag-list-remove" onclick="removeTag('${child.key}')">🗑️</button>`;
       list.appendChild(row);
     });
